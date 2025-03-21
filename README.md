@@ -1,5 +1,5 @@
 # IzerRaster
-IzerRaster is a rasterizer.
+IzerRaster is a rasterizer. What is a rasterizer? A rasterizer takes 3D models and projects them to a 2D surface, that 2D surface being the computer screen.
 
 # Trello
 
