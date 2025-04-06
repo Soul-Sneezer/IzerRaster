@@ -42,11 +42,14 @@ PYBIND11_MODULE(IzerRaster, m)
         .def("Init", &Renderer2D::Init)
         .def("Run", &Renderer2D::Run)
         .def("HandleEvents", &Renderer2D::HandleEvents)
-         //.def("Render", &Renderer2D::Render)
-        //.def("UserDraw", &Renderer2D::UserDraw)
         .def("Quit", &Renderer2D::Quit)
         .def("clearScreen", &Renderer2D::clearScreen)
-        .def("drawPoint", py::overload_cast<int, int, uint32_t>(&Renderer2D::drawPoint), py::arg("x"), py::arg("y"), py::arg("rgba_uint32"))
         .def("drawPoint", py::overload_cast<int, int, RGBA>(&Renderer2D::drawPoint), py::arg("x"), py::arg("y"), py::arg("rgba_struct"))
-        .def("drawLine", &Renderer2D::drawLine, py::arg("x1"), py::arg("y1"), py::arg("x2"), py::arg("y2"));
+        .def("drawLine", &Renderer2D::drawLine, py::arg("x1"), py::arg("y1"), py::arg("x2"), py::arg("y2"), py::arg("rgba"))
+        .def("drawRect", &Renderer2D::drawRect)
+        .def("fillRect", &Renderer2D::fillRect)
+        .def("drawCircle", &Renderer2D::drawCircle)
+        .def("fillCircle", &Renderer2D::fillCircle)
+        .def("drawTriangle", &Renderer2D::drawTriangle)
+        .def("fillTriangle", &Renderer2D::fillTriangle);
 }
