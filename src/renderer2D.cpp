@@ -497,35 +497,44 @@ namespace py = pybind11;
 
             normal.x = line1.y * line2.z - line1.z * line2.y;
             normal.y = line1.z * line2.x - line1.x * line2.z;
-            normal.z = line1.z * line2.y - line1.y * line2.x;
+            normal.z = line1.x * line2.y - line1.y * line2.x;
 
             float l = sqrtf(normal.x * normal.x + normal.y*normal.y + normal.z * normal.z);
             normal.x /= l;
             normal.y /= l;
             normal.z /= l;
 
-            if(normal.x * (triTranslated.p[0].x - vCamera.x) + 
-               normal.y * (triTranslated.p[0].y - vCamera.y) +
-               normal.z * (triTranslated.p[0].z - vCamera.z) < 0.0f){
+            if(normal.x * (triTranslated.p[0].x - vCamera.x) + normal.y * (triTranslated.p[0].y - vCamera.y) + normal.z * (triTranslated.p[0].z - vCamera.z) < 0.0f){
+                
 
                 multiplyMatrixVector(triTranslated.p[0], triProjected.p[0], matProj);
                 multiplyMatrixVector(triTranslated.p[1], triProjected.p[1], matProj);
                 multiplyMatrixVector(triTranslated.p[2], triProjected.p[2], matProj);
 
                 //Scale
-                triProjected.p[0].x = (triProjected.p[0].x + 1.0f) * 0.5f * (float)windowWidth;
-                triProjected.p[0].y = (1.0f - triProjected.p[0].y) * 0.5f * (float)windowHeight;
-                
-                triProjected.p[1].x = (triProjected.p[1].x + 1.0f) * 0.5f * (float)windowWidth;
-                triProjected.p[1].y = (1.0f - triProjected.p[1].y) * 0.5f * (float)windowHeight;
-                
-                triProjected.p[2].x = (triProjected.p[2].x + 1.0f) * 0.5f * (float)windowWidth;
-                triProjected.p[2].y = (1.0f - triProjected.p[2].y) * 0.5f * (float)windowHeight; 
+                triProjected.p[0].x += 1.0f; triProjected.p[0].y += 1.0f;
+				triProjected.p[1].x += 1.0f; triProjected.p[1].y += 1.0f;
+				triProjected.p[2].x += 1.0f; triProjected.p[2].y += 1.0f;
+				triProjected.p[0].x *= 0.5f * (float)windowWidth;
+				triProjected.p[0].y *= 0.5f * (float)windowHeight;
+				triProjected.p[1].x *= 0.5f * (float)windowWidth;
+				triProjected.p[1].y *= 0.5f * (float)windowHeight;
+				triProjected.p[2].x *= 0.5f * (float)windowWidth;
+				triProjected.p[2].y *= 0.5f * (float)windowHeight;
+
                 
                 tria.push_back(triProjected);
             }
 
         }
+
+        sort(tria.begin(), tria.end(), [](triangle &t1, triangle &t2)
+		{
+			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
+			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
+			return z1 > z2;
+		});
+
 
         for (const auto& triToRaster : tria) {
             drawTriangle(
