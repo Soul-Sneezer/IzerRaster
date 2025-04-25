@@ -2,6 +2,10 @@
 #include "renderer2D.hpp"
 #include <iostream>
 #include <algorithm>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <cmath>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -59,26 +63,28 @@ namespace py = pybind11;
             return;
         }
 
-        meshCube.tris = {
-            {0.0f, 0.0f, 0.0f,     0.0f, 1.0f,0.0f,       1.0f, 1.0f, 0.0f},
-            {0.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 0.0f, 0.0f},
+        // meshCube.tris = {
+        //     {0.0f, 0.0f, 0.0f,     0.0f, 1.0f,0.0f,       1.0f, 1.0f, 0.0f},
+        //     {0.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 0.0f, 0.0f},
 
-            {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 1.0f, 1.0f},
-            {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 0.0f, 1.0f},
+        //     {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 1.0f, 1.0f},
+        //     {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 0.0f, 1.0f},
 
-            {1.0f, 0.0f, 1.0f,     1.0f, 1.0f,1.0f,       0.0f, 1.0f, 1.0f},
-            {1.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 0.0f, 1.0f},
+        //     {1.0f, 0.0f, 1.0f,     1.0f, 1.0f,1.0f,       0.0f, 1.0f, 1.0f},
+        //     {1.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 0.0f, 1.0f},
 
-            {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 1.0f, 0.0f},
-            {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,0.0f,       0.0f, 0.0f, 0.0f},
+        //     {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 1.0f, 0.0f},
+        //     {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,0.0f,       0.0f, 0.0f, 0.0f},
 
-            {0.0f, 1.0f, 0.0f,     0.0f, 1.0f,1.0f,       1.0f, 1.0f, 1.0f},
-            {0.0f, 1.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 1.0f, 0.0f},
+        //     {0.0f, 1.0f, 0.0f,     0.0f, 1.0f,1.0f,       1.0f, 1.0f, 1.0f},
+        //     {0.0f, 1.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 1.0f, 0.0f},
 
-            {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,1.0f,       0.0f, 0.0f, 0.0f},
-            {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,0.0f,       1.0f, 0.0f, 0.0f},
+        //     {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,1.0f,       0.0f, 0.0f, 0.0f},
+        //     {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,0.0f,       1.0f, 0.0f, 0.0f},
 
-        };
+        // };
+
+        meshCube.LoadFromObjectFile("C:/Users/pasca/IzerRaster/obj/VideoShip.obj");
 
         float fNear = 0.1f;
         float fFar = 1000.0f;
@@ -482,9 +488,9 @@ namespace py = pybind11;
             multiplyMatrixVector(triRotatedZ.p[2], triRotatedZX.p[2], matRotX);
 
             triTranslated = triRotatedZX;
-            triTranslated.p[0].z = triRotatedZX.p[0].z + 3.0f;
-            triTranslated.p[1].z = triRotatedZX.p[1].z + 3.0f;
-            triTranslated.p[2].z = triRotatedZX.p[2].z + 3.0f;
+            triTranslated.p[0].z = triRotatedZX.p[0].z + 10.0f;
+            triTranslated.p[1].z = triRotatedZX.p[1].z + 10.0f;
+            triTranslated.p[2].z = triRotatedZX.p[2].z + 10.0f;
 
             vec3d normal, line1, line2;
             line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
