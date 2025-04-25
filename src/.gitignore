@@ -1,0 +1,64 @@
+# --- Build Directories ---
+# Standard CMake build directory
+/build/
+
+# --- IDE Configuration ---
+# Visual Studio Code
+/.vscode/
+
+# --- Compiled Binaries & Libraries ---
+# Executables (Windows and Linux/macOS)
+*.exe
+# Add your specific executable name if generated outside /build/
+# my_renderer
+
+# Shared Libraries / Dependencies (as requested)
+*.dll
+*.so
+*.dylib
+
+# Static Libraries
+*.a
+*.lib
+
+# Python Extensions (as requested)
+*.pyd
+
+# Object files
+*.o
+*.obj
+
+# Precompiled Headers
+*.pch
+
+# --- Python Specific ---
+# Bytecode files
+*.pyc
+__pycache__/
+
+# Distribution / packaging
+/dist/
+/sdist/
+/*.egg-info/
+/MANIFEST
+
+# Virtual environments (users should manage their own)
+/venv/
+/.venv/
+/env/
+/.env/
+/ENV/
+/.ENV/
+
+# --- CMake Generated Files (if they appear outside /build/) ---
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+
+# --- OS Specific Files ---
+# macOS
+.DS_Store
+# Windows
+Thumbs.db

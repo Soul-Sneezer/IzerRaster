@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\pasca\IzerRaster\build\CMakeFiles\10e3d79cb76bb2bb28f20a64f15a3090\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{B826C1F0-7673-36CF-9399-5C004DDAF3D0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

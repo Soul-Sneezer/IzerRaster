@@ -18,6 +18,22 @@ struct RGBA
     RGBA() : r(0), g(0), b(0), a(255) {}
 };
 
+struct vec3d{
+    float x,y,z;
+};
+
+struct triangle{
+    vec3d p[3];
+};
+
+struct mesh{
+    std::vector<triangle> tris;
+};
+
+struct mat4x4{
+    float m[4][4] = {0};
+};
+
 class Renderer2D
 {
 private:
@@ -25,6 +41,13 @@ private:
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* screenTexture = nullptr;
     std::vector<RGBA> screenBuffer;
+
+    //stuff for projections
+    mesh meshCube;
+    mat4x4 matProj, matRotX, matRotZ, matTrans;
+    float fTheta;
+    vec3d vCamera;
+
     
     TTF_Font* font; 
     uint32_t lastTime = SDL_GetTicks(); // Time since SDL_Init
@@ -58,4 +81,7 @@ public:
     void fillBottomFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
     void fillTopFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
     void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
+    void drawCube();
+    void multiplyMatrixVector(vec3d &i, vec3d &o, mat4x4 &m);
+    void update(float deltaTime);
 };

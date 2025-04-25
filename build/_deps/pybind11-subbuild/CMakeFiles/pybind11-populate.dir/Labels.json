@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/pybind11-populate"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f4e44d52eb43b545b95dcf0496434488/pybind11-populate.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/658463bb514de01620c26a61da03e884/pybind11-populate-complete.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f51037bf0cd2e100c7be55b12ea0c461/pybind11-populate-build.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f51037bf0cd2e100c7be55b12ea0c461/pybind11-populate-configure.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f51037bf0cd2e100c7be55b12ea0c461/pybind11-populate-download.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f51037bf0cd2e100c7be55b12ea0c461/pybind11-populate-install.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f51037bf0cd2e100c7be55b12ea0c461/pybind11-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f51037bf0cd2e100c7be55b12ea0c461/pybind11-populate-patch.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f51037bf0cd2e100c7be55b12ea0c461/pybind11-populate-test.rule"
+		},
+		{
+			"file" : "C:/Users/pasca/IzerRaster/build/_deps/pybind11-subbuild/CMakeFiles/f51037bf0cd2e100c7be55b12ea0c461/pybind11-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"pybind11-populate"
+		],
+		"name" : "pybind11-populate"
+	}
+}

@@ -59,8 +59,8 @@ message(STATUS "Found SDL3_ttf Include Dirs: ${SDL3_TTF_INCLUDE_DIRS}")
 # It automatically handles the correct naming conventions (.so/.pyd) and links Python.
 # The first argument "IzerRaster" MUST match the name in PYBIND11_MODULE(IzerRaster, m)
 pybind11_add_module(IzerRaster SHARED
-    renderer2D.cpp
-    bindings.cpp
+    src/renderer2D.cpp
+    src/bindings.cpp
 )
 
 # --- Link Dependencies to the Module ---
