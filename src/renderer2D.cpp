@@ -1,5 +1,11 @@
+#define SDL_MAIN_HANDLED
 #include "renderer2D.hpp"
 #include <iostream>
+#include <algorithm>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <cmath>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -56,15 +62,38 @@ namespace py = pybind11;
         {
             return;
         }
+
+        //for triangle projections and geometry
+        float fNear = 0.1f;
+        float fFar = 1000.0f;
+        float fFov = 90.0f;
+        float fAspectRatio = (float)windowHeight / (float)windowWidth;
+        float fFovRad = 1.0/ tanf(fFov * 0.5f / 180.0f * 3.14159f);
+
+        matProj.m[0][0] = fAspectRatio * fFovRad;
+        matProj.m[1][1] = fFovRad;
+        matProj.m[2][2] = fFar / (fFar - fNear);
+        matProj.m[2][3] = 1.0f;
+        matProj.m[3][2] = (-fFar * fNear) / (fFar - fNear);
+        matProj.m[3][3] = 0.0f;
+
+        vCamera = {0};
+        
         isRunning = true;
     }
 
+    //While Running
     void Renderer2D::Run()
     {
+        Uint64 lastTime = SDL_GetTicks();
         while (isRunning)
         {
+            Uint64 currentTime = SDL_GetTicks();
+            float deltaTime = (currentTime - lastTime) / 1000.0f;
+            lastTime = currentTime;
+    
             HandleEvents();
-
+            update(deltaTime); 
             Render();
         }
     }
@@ -91,6 +120,8 @@ namespace py = pybind11;
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);
 
+        clearScreen();
+
         UserDraw();
         
         SDL_UpdateTexture(screenTexture, nullptr, screenBuffer.data(),  windowWidth * sizeof(RGBA));
@@ -105,9 +136,11 @@ namespace py = pybind11;
         //SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         //drawLine(0, 0, windowWidth, windowHeight);
         
-        drawPoint(300, 400, {255, 255, 255, 255});
-        drawPoint(250, 320, {100, 120, 180, 255});
-        drawPoint(500, 200, {200, 50, 40, 200});
+        // drawPoint(300, 400, {255, 255, 255, 255});
+        // drawPoint(250, 320, {100, 120, 180, 255});
+        // drawPoint(500, 200, {200, 50, 40, 200});
+        drawCube();
+
     }
 
     void Renderer2D::Quit()
@@ -404,3 +437,150 @@ namespace py = pybind11;
             fillTopFlatTriangle(v2.first, v2.second, v3.first, v3.second, v1.first, v1.second, rgba);
         }
     }
+
+    void Renderer2D::update(float deltaTime){
+    fTheta += 1.0f * deltaTime; 
+
+    matRotZ.m[0][0] = cosf(fTheta);
+    matRotZ.m[0][1] = sinf(fTheta);
+    matRotZ.m[1][0] = -sinf(fTheta);
+    matRotZ.m[1][1] = cosf(fTheta);
+    matRotZ.m[2][2] = 1;
+    matRotZ.m[3][3] = 1;
+
+    matRotX.m[0][0] = 1;
+    matRotX.m[1][1] = cosf(fTheta * 0.5f);
+    matRotX.m[1][2] = sinf(fTheta * 0.5f);
+    matRotX.m[2][1] = -sinf(fTheta * 0.5f);
+    matRotX.m[2][2] = cosf(fTheta * 0.5f);
+    matRotX.m[3][3] = 1;
+
+    }
+
+    void Renderer2D::loadObj(std::string path){
+        obj.LoadFromObjectFile("C:/Users/pasca/IzerRaster/obj/IronMan.obj");
+        simpleRender(obj);
+    }
+
+    void Renderer2D::drawObj(){
+        simpleRender(obj);
+    }
+
+    void Renderer2D::simpleRender(mesh meshObj){
+        std::vector<triangle> tria;
+
+        for(auto tri: meshObj.tris){
+            triangle triProjected, triTranslated, triRotatedZ, triRotatedZX;
+
+            multiplyMatrixVector(tri.p[0], triRotatedZ.p[0], matRotZ);
+            multiplyMatrixVector(tri.p[1], triRotatedZ.p[1], matRotZ);
+            multiplyMatrixVector(tri.p[2], triRotatedZ.p[2], matRotZ);
+
+            multiplyMatrixVector(triRotatedZ.p[0], triRotatedZX.p[0], matRotX);
+            multiplyMatrixVector(triRotatedZ.p[1], triRotatedZX.p[1], matRotX);
+            multiplyMatrixVector(triRotatedZ.p[2], triRotatedZX.p[2], matRotX);
+
+            //how far the object is
+            triTranslated = triRotatedZX;
+            triTranslated.p[0].z = triRotatedZX.p[0].z + 350.0f;
+            triTranslated.p[1].z = triRotatedZX.p[1].z + 350.0f;
+            triTranslated.p[2].z = triRotatedZX.p[2].z + 350.0f;
+
+            vec3d normal, line1, line2;
+            line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
+            line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
+            line1.z = triTranslated.p[1].z - triTranslated.p[0].z;
+
+            line2.x = triTranslated.p[2].x - triTranslated.p[0].x;
+            line2.y = triTranslated.p[2].y - triTranslated.p[0].y;
+            line2.z = triTranslated.p[2].z - triTranslated.p[0].z;
+
+            normal.x = line1.y * line2.z - line1.z * line2.y;
+            normal.y = line1.z * line2.x - line1.x * line2.z;
+            normal.z = line1.x * line2.y - line1.y * line2.x;
+
+            float l = sqrtf(normal.x * normal.x + normal.y*normal.y + normal.z * normal.z);
+            normal.x /= l;
+            normal.y /= l;
+            normal.z /= l;
+
+            if(normal.x * (triTranslated.p[0].x - vCamera.x) + normal.y * (triTranslated.p[0].y - vCamera.y) + normal.z * (triTranslated.p[0].z - vCamera.z) < 0.0f){
+                
+
+                multiplyMatrixVector(triTranslated.p[0], triProjected.p[0], matProj);
+                multiplyMatrixVector(triTranslated.p[1], triProjected.p[1], matProj);
+                multiplyMatrixVector(triTranslated.p[2], triProjected.p[2], matProj);
+
+                //Scale
+                triProjected.p[0].x += 1.0f; triProjected.p[0].y += 1.0f;
+				triProjected.p[1].x += 1.0f; triProjected.p[1].y += 1.0f;
+				triProjected.p[2].x += 1.0f; triProjected.p[2].y += 1.0f;
+				triProjected.p[0].x *= 0.5f * (float)windowWidth;
+				triProjected.p[0].y *= 0.5f * (float)windowHeight;
+				triProjected.p[1].x *= 0.5f * (float)windowWidth;
+				triProjected.p[1].y *= 0.5f * (float)windowHeight;
+				triProjected.p[2].x *= 0.5f * (float)windowWidth;
+				triProjected.p[2].y *= 0.5f * (float)windowHeight;
+
+                
+                tria.push_back(triProjected);
+            }
+
+        }
+
+        sort(tria.begin(), tria.end(), [](triangle &t1, triangle &t2)
+		{
+			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
+			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
+			return z1 > z2;
+		});
+
+
+        for (const auto& triToRaster : tria) {
+            drawTriangle(
+               static_cast<int>(triToRaster.p[0].x), static_cast<int>(triToRaster.p[0].y),
+               static_cast<int>(triToRaster.p[1].x), static_cast<int>(triToRaster.p[1].y),
+               static_cast<int>(triToRaster.p[2].x), static_cast<int>(triToRaster.p[2].y),
+               RGBA(200,200,200,200)
+           );
+        
+       }
+    }
+
+
+    void Renderer2D::drawCube(){
+        meshCube.tris = {
+            {0.0f, 0.0f, 0.0f,     0.0f, 1.0f,0.0f,       1.0f, 1.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 0.0f, 0.0f},
+
+            {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 1.0f, 1.0f},
+            {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 0.0f, 1.0f},
+
+            {1.0f, 0.0f, 1.0f,     1.0f, 1.0f,1.0f,       0.0f, 1.0f, 1.0f},
+            {1.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 0.0f, 1.0f},
+
+            {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 1.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,0.0f,       0.0f, 0.0f, 0.0f},
+
+            {0.0f, 1.0f, 0.0f,     0.0f, 1.0f,1.0f,       1.0f, 1.0f, 1.0f},
+            {0.0f, 1.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 1.0f, 0.0f},
+
+            {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,1.0f,       0.0f, 0.0f, 0.0f},
+            {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,0.0f,       1.0f, 0.0f, 0.0f},
+
+        };
+        simpleRender(meshCube);
+    }
+
+    void Renderer2D::multiplyMatrixVector(vec3d &i, vec3d &o, mat4x4 &m){
+        o.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + m.m[3][0];
+        o.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + m.m[3][1];
+        o.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + m.m[3][2];
+        float w = i.x * m.m[0][3] + i.y * m.m[1][3] + i.z * m.m[2][3] + m.m[3][3];
+
+        if(w != 0.0f){
+            o.x /= w;
+            o.y /= w;
+            o.z /= w;
+        }
+    } 

@@ -1,3 +1,4 @@
+#define SDL_MAIN_HANDLED
 #include <pybind11/pybind11.h>  
 #include <pybind11/stl.h> 
 #include "renderer2D.hpp"
@@ -51,5 +52,8 @@ PYBIND11_MODULE(IzerRaster, m)
         .def("drawCircle", &Renderer2D::drawCircle)
         .def("fillCircle", &Renderer2D::fillCircle)
         .def("drawTriangle", &Renderer2D::drawTriangle)
-        .def("fillTriangle", &Renderer2D::fillTriangle);
+        .def("fillTriangle", &Renderer2D::fillTriangle)
+        .def("drawCube", &Renderer2D::drawCube)
+        .def("load_obj", &Renderer2D::loadObj,py::arg("filename"))
+        .def("drawObj", &Renderer2D::drawObj);
 }
