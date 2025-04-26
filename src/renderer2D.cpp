@@ -58,11 +58,6 @@ namespace py = pybind11;
 
         //font = TTF_OpenFont("arial.ttf", 24);
 
-        if (!font)
-        {
-            return;
-        }
-
         //for triangle projections and geometry
         float fNear = 0.1f;
         float fFar = 1000.0f;
@@ -458,7 +453,7 @@ namespace py = pybind11;
     }
 
     void Renderer2D::loadObj(std::string path){
-        obj.LoadFromObjectFile("C:/Users/pasca/IzerRaster/obj/IronMan.obj");
+        //obj.LoadFromObjectFile("C:/Users/pasca/IzerRaster/obj/IronMan.obj");
         simpleRender(obj);
     }
 
@@ -482,9 +477,9 @@ namespace py = pybind11;
 
             //how far the object is
             triTranslated = triRotatedZX;
-            triTranslated.p[0].z = triRotatedZX.p[0].z + 350.0f;
-            triTranslated.p[1].z = triRotatedZX.p[1].z + 350.0f;
-            triTranslated.p[2].z = triRotatedZX.p[2].z + 350.0f;
+            triTranslated.p[0].z = triRotatedZX.p[0].z + 8.0f;
+            triTranslated.p[1].z = triRotatedZX.p[1].z + 8.0f;
+            triTranslated.p[2].z = triRotatedZX.p[2].z + 8.0f;
 
             vec3d normal, line1, line2;
             line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
@@ -537,11 +532,17 @@ namespace py = pybind11;
 
 
         for (const auto& triToRaster : tria) {
-            drawTriangle(
+            fillTriangle(
                static_cast<int>(triToRaster.p[0].x), static_cast<int>(triToRaster.p[0].y),
                static_cast<int>(triToRaster.p[1].x), static_cast<int>(triToRaster.p[1].y),
                static_cast<int>(triToRaster.p[2].x), static_cast<int>(triToRaster.p[2].y),
                RGBA(200,200,200,200)
+           );
+            drawTriangle(
+               static_cast<int>(triToRaster.p[0].x), static_cast<int>(triToRaster.p[0].y),
+               static_cast<int>(triToRaster.p[1].x), static_cast<int>(triToRaster.p[1].y),
+               static_cast<int>(triToRaster.p[2].x), static_cast<int>(triToRaster.p[2].y),
+               RGBA(100,100,100,255)
            );
         
        }
