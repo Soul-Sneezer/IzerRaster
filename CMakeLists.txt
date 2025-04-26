@@ -87,7 +87,7 @@ if(MSVC)
   target_compile_options(IzerRaster PRIVATE /W3) # Warning level 3
 else()
   # GCC/Clang specific flags (-Wall corresponds to the original command)
-  target_compile_options(IzerRaster PRIVATE -Wall -Wextra)
+  target_compile_options(IzerRaster PRIVATE -Wall -Wextra -g)
   # -fPIC is generally handled automatically by CMake for SHARED libraries on relevant platforms
 endif()
 

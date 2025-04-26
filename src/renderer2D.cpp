@@ -331,13 +331,13 @@ namespace py = pybind11;
 
     void Renderer2D::fillBottomFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba)
     {
-        float slope1 = (x2 - x1) / (y2 - y1);
-        float slope2 = (x3 - x1) / (y3 - y1); 
+        float slope1 = (float)(x2 - x1) / (y2 - y1);
+        float slope2 = (float)(x3 - x1) / (y3 - y1);
 
         float currentX1 = x1;
         float currentX2 = x1;
 
-        for (int startY = y1; startY <= y2; startY++) 
+        for (int startY = y1; startY <= y2; startY++)
         {
             drawHorizontalLine(startY, (int)currentX1, (int)currentX2, rgba);
             currentX1 += slope1;
@@ -347,13 +347,13 @@ namespace py = pybind11;
 
     void Renderer2D::fillTopFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba)
     {
-        float slope1 = (x2 - x1) / (y2 - y1);
-        float slope2 = (x3 - x1) / (y3 - y1); 
+        float slope1 = (float)(x2 - x1) / (y2 - y1);
+        float slope2 = (float)(x3 - x1) / (y3 - y1);
 
         float currentX1 = x1;
         float currentX2 = x1;
 
-        for (int startY = y1; startY >= y2; startY--) 
+        for (int startY = y1; startY >= y2; startY--)
         {
             drawHorizontalLine(startY, (int)currentX1, (int)currentX2, rgba);
             currentX1 -= slope1;
@@ -371,15 +371,22 @@ namespace py = pybind11;
         vertices.push_back(std::make_pair(x2, y2));
         vertices.push_back(std::make_pair(x3, y3));
 
-        std::sort(vertices.begin(), vertices.end(), [](const std::pair<int, int> a, const std::pair<int, int> b) { return a.second < b.second; });
+        std::sort(vertices.begin(), vertices.end(), [](const std::pair<int, int> a, const std::pair<int, int> b) {
+                return (a.second < b.second) || (a.second == b.second && a.first < b.first); });
 
         std::pair<int, int> v0 = vertices[0];
         std::pair<int, int> v1 = vertices[1];
         std::pair<int, int> v2 = vertices[2];
 
-       // so you basically divide the triangle further into two triangles 
+       // so you basically divide the triangle further into two triangles
        // one with a flat bottom and one with a flat top
        // if it does not already have a flat top or bottom
+
+        if ((v1.first - v0.first) * (v2.second - v0.second) == (v2.first - v0.first) * (v1.second - v0.second))
+            return;
+
+        if (v0.second == v1.second && v1.second == v2.second)
+            return;
 
         if (v1.second == v2.second)
         {
@@ -389,10 +396,10 @@ namespace py = pybind11;
         {
             fillTopFlatTriangle(v2.first, v2.second, v1.first, v1.second, v0.first, v0.second, rgba);
         }
-        else 
+        else
         {
-            // create a new vertex 
-            std::pair<int, int> v3 = std::make_pair((int)(v0.first + ((float)(v1.second - v0.second) / (float)(v2.second - v1.second)) * (v2.first - v0.first)), v1.second);
+            // create a new vertex
+            std::pair<int, int> v3 = std::make_pair(v0.first + (int)((float)(v1.second - v0.second) / (v2.second - v0.second) * (v2.first - v0.first)), v1.second);
             fillBottomFlatTriangle(v0.first, v0.second, v1.first, v1.second, v3.first, v3.second, rgba);
             fillTopFlatTriangle(v2.first, v2.second, v3.first, v3.second, v1.first, v1.second, rgba);
         }
