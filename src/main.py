@@ -2,6 +2,14 @@ import IzerRaster
 
 
 class CustomRenderer(IzerRaster.Renderer2D):
+    def __init__(self, appName, width, height):
+        super().__init__(appName, width, height)
+        self.object_loaded = False
+
+    def setup_scene(self):
+        obj_path = "C:/Users/pasca/IzerRaster/obj/IronMan.obj"
+        self.object_loaded = self.load_obj(obj_path)
+
     def UserDraw(self):
         # self.drawPoint(250, 200, IzerRaster.RGBA(250, 100, 0, 0))
         # self.drawLine(100, 100, 100, 400, IzerRaster.RGBA(0, 0, 255, 255))
@@ -12,10 +20,11 @@ class CustomRenderer(IzerRaster.Renderer2D):
        # self.fillRect(200, 200, 400, 400, IzerRaster.RGBA(0, 120, 180, 255))
        # self.fillTriangle(400, 400, 300, 300, 400, 200,
        #  IzerRaster.RGBA(200, 200, 200, 200))
-        self.drawCube()
+        self.drawObj()
 
 
 renderer2D = CustomRenderer("Testing", 1920, 1080)
 renderer2D.Init()
+renderer2D.setup_scene()
 renderer2D.Run()
 renderer2D.Quit()

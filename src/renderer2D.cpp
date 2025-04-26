@@ -63,29 +63,7 @@ namespace py = pybind11;
             return;
         }
 
-        // meshCube.tris = {
-        //     {0.0f, 0.0f, 0.0f,     0.0f, 1.0f,0.0f,       1.0f, 1.0f, 0.0f},
-        //     {0.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 0.0f, 0.0f},
-
-        //     {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 1.0f, 1.0f},
-        //     {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 0.0f, 1.0f},
-
-        //     {1.0f, 0.0f, 1.0f,     1.0f, 1.0f,1.0f,       0.0f, 1.0f, 1.0f},
-        //     {1.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 0.0f, 1.0f},
-
-        //     {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 1.0f, 0.0f},
-        //     {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,0.0f,       0.0f, 0.0f, 0.0f},
-
-        //     {0.0f, 1.0f, 0.0f,     0.0f, 1.0f,1.0f,       1.0f, 1.0f, 1.0f},
-        //     {0.0f, 1.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 1.0f, 0.0f},
-
-        //     {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,1.0f,       0.0f, 0.0f, 0.0f},
-        //     {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,0.0f,       1.0f, 0.0f, 0.0f},
-
-        // };
-
-        meshCube.LoadFromObjectFile("C:/Users/pasca/IzerRaster/obj/VideoShip.obj");
-
+        //for triangle projections and geometry
         float fNear = 0.1f;
         float fFar = 1000.0f;
         float fFov = 90.0f;
@@ -470,13 +448,21 @@ namespace py = pybind11;
     matRotX.m[2][2] = cosf(fTheta * 0.5f);
     matRotX.m[3][3] = 1;
 
-}
+    }
 
-    void Renderer2D::drawCube(){
+    void Renderer2D::loadObj(std::string path){
+        obj.LoadFromObjectFile("C:/Users/pasca/IzerRaster/obj/IronMan.obj");
+        simpleRender(obj);
+    }
 
+    void Renderer2D::drawObj(){
+        simpleRender(obj);
+    }
+
+    void Renderer2D::simpleRender(mesh meshObj){
         std::vector<triangle> tria;
 
-        for(auto tri: meshCube.tris){
+        for(auto tri: meshObj.tris){
             triangle triProjected, triTranslated, triRotatedZ, triRotatedZX;
 
             multiplyMatrixVector(tri.p[0], triRotatedZ.p[0], matRotZ);
@@ -487,10 +473,11 @@ namespace py = pybind11;
             multiplyMatrixVector(triRotatedZ.p[1], triRotatedZX.p[1], matRotX);
             multiplyMatrixVector(triRotatedZ.p[2], triRotatedZX.p[2], matRotX);
 
+            //how far the object is
             triTranslated = triRotatedZX;
-            triTranslated.p[0].z = triRotatedZX.p[0].z + 10.0f;
-            triTranslated.p[1].z = triRotatedZX.p[1].z + 10.0f;
-            triTranslated.p[2].z = triRotatedZX.p[2].z + 10.0f;
+            triTranslated.p[0].z = triRotatedZX.p[0].z + 350.0f;
+            triTranslated.p[1].z = triRotatedZX.p[1].z + 350.0f;
+            triTranslated.p[2].z = triRotatedZX.p[2].z + 350.0f;
 
             vec3d normal, line1, line2;
             line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
@@ -551,6 +538,31 @@ namespace py = pybind11;
            );
         
        }
+    }
+
+
+    void Renderer2D::drawCube(){
+        meshCube.tris = {
+            {0.0f, 0.0f, 0.0f,     0.0f, 1.0f,0.0f,       1.0f, 1.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 0.0f, 0.0f},
+
+            {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 1.0f, 1.0f},
+            {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 0.0f, 1.0f},
+
+            {1.0f, 0.0f, 1.0f,     1.0f, 1.0f,1.0f,       0.0f, 1.0f, 1.0f},
+            {1.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 0.0f, 1.0f},
+
+            {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 1.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,0.0f,       0.0f, 0.0f, 0.0f},
+
+            {0.0f, 1.0f, 0.0f,     0.0f, 1.0f,1.0f,       1.0f, 1.0f, 1.0f},
+            {0.0f, 1.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 1.0f, 0.0f},
+
+            {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,1.0f,       0.0f, 0.0f, 0.0f},
+            {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,0.0f,       1.0f, 0.0f, 0.0f},
+
+        };
+        simpleRender(meshCube);
     }
 
     void Renderer2D::multiplyMatrixVector(vec3d &i, vec3d &o, mat4x4 &m){
