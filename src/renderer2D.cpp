@@ -451,7 +451,7 @@ namespace py = pybind11;
     }
 
     void Renderer2D::loadObj(std::string path){
-        obj.LoadFromObjectFile("C:/Users/pasca/IzerRaster/obj/IronMan.obj");
+        obj.LoadFromObjectFile(path);
         simpleRender(obj);
     }
 
