@@ -52,7 +52,6 @@ message(STATUS "Found SDL3 Library: ${SDL3_LIBRARIES} (Using Target: SDL3::SDL3)
 message(STATUS "Found SDL3 Include Dirs: ${SDL3_INCLUDE_DIRS}")
 message(STATUS "Found SDL3_ttf Library: ${SDL3_TTF_LIBRARIES} (Using Target: SDL3_ttf::SDL3_ttf)")
 message(STATUS "Found SDL3_ttf Include Dirs: ${SDL3_TTF_INCLUDE_DIRS}")
-
 # --- Define the Python Module Target ---
 
 # Use pybind11's helper function to create the Python extension module.
@@ -78,6 +77,14 @@ target_link_libraries(IzerRaster PRIVATE
 target_include_directories(IzerRaster PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR} # Directory containing this CMakeLists.txt
 )
+
+find_path(GLM_INCLUDE_DIR glm/glm.hpp)
+if(NOT GLM_INCLUDE_DIR)
+  message(FATAL_ERROR "GLM not found!")
+endif()
+
+target_include_directories(IzerRaster PRIVATE ${GLM_INCLUDE_DIR})
+
 
 # --- Configure Build Options ---
 

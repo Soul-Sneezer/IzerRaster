@@ -6,11 +6,6 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
-#include <SDL3_ttf/SDL_ttf.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-
-namespace py = pybind11;
 
     Renderer2D::Renderer2D(const std::string appName, int width, int height) : appName(appName), windowWidth(width), windowHeight(height)
     {
@@ -61,20 +56,25 @@ namespace py = pybind11;
         //for triangle projections and geometry
         float fNear = 0.1f;
         float fFar = 1000.0f;
-        float fFov = 90.0f;
-        float fAspectRatio = (float)windowHeight / (float)windowWidth;
-        float fFovRad = 1.0/ tanf(fFov * 0.5f / 180.0f * 3.14159f);
+        float fFov = 60.0f;
+        float fAspectRatio = (float)windowWidth / (float)windowHeight;
+        //float fFovRad = 1.0/ tanf(fFov * 0.5f / 180.0f * 3.14159f);
 
+        matProj = glm::perspective(glm::radians(fFov), fAspectRatio, fNear, fFar);
+
+       /*
         matProj.m[0][0] = fAspectRatio * fFovRad;
         matProj.m[1][1] = fFovRad;
         matProj.m[2][2] = fFar / (fFar - fNear);
         matProj.m[2][3] = 1.0f;
         matProj.m[3][2] = (-fFar * fNear) / (fFar - fNear);
         matProj.m[3][3] = 0.0f;
-
-        vCamera = {0};
+       */
+        vCamera = glm::vec4{0};
         
         isRunning = true;
+
+        UserInit();
     }
 
     //While Running
@@ -126,16 +126,12 @@ namespace py = pybind11;
         SDL_RenderPresent(renderer);
     }
 
+    void Renderer2D::UserInit()
+    {
+    }
+
     void Renderer2D::UserDraw()
     {
-        //SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-        //drawLine(0, 0, windowWidth, windowHeight);
-        
-        // drawPoint(300, 400, {255, 255, 255, 255});
-        // drawPoint(250, 320, {100, 120, 180, 255});
-        // drawPoint(500, 200, {200, 50, 40, 200});
-        drawCube();
-
     }
 
     void Renderer2D::Quit()
@@ -436,19 +432,24 @@ namespace py = pybind11;
     void Renderer2D::update(float deltaTime){
     fTheta += 1.0f * deltaTime; 
 
+    matRotZ = glm::rotate(fTheta, glm::vec3(0,0,1));
+    /*
     matRotZ.m[0][0] = cosf(fTheta);
     matRotZ.m[0][1] = sinf(fTheta);
     matRotZ.m[1][0] = -sinf(fTheta);
     matRotZ.m[1][1] = cosf(fTheta);
     matRotZ.m[2][2] = 1;
     matRotZ.m[3][3] = 1;
-
+*/
+    matRotX = glm::rotate(fTheta, glm::vec3(1,0,0));
+    /*
     matRotX.m[0][0] = 1;
     matRotX.m[1][1] = cosf(fTheta * 0.5f);
     matRotX.m[1][2] = sinf(fTheta * 0.5f);
     matRotX.m[2][1] = -sinf(fTheta * 0.5f);
     matRotX.m[2][2] = cosf(fTheta * 0.5f);
     matRotX.m[3][3] = 1;
+    */
 
     }
 
@@ -465,23 +466,15 @@ namespace py = pybind11;
         std::vector<triangle> tria;
 
         for(auto tri: meshObj.tris){
-            triangle triProjected, triTranslated, triRotatedZ, triRotatedZX;
+            triangle triProjected, triTranslated;
 
-            multiplyMatrixVector(tri.p[0], triRotatedZ.p[0], matRotZ);
-            multiplyMatrixVector(tri.p[1], triRotatedZ.p[1], matRotZ);
-            multiplyMatrixVector(tri.p[2], triRotatedZ.p[2], matRotZ);
+            glm::mat4 matTrans = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
+            
+            triTranslated.p[0] = matTrans * matRotX * matRotZ * tri.p[0];
+            triTranslated.p[1] = matTrans * matRotX * matRotZ * tri.p[1];
+            triTranslated.p[2] = matTrans * matRotX * matRotZ * tri.p[2];
 
-            multiplyMatrixVector(triRotatedZ.p[0], triRotatedZX.p[0], matRotX);
-            multiplyMatrixVector(triRotatedZ.p[1], triRotatedZX.p[1], matRotX);
-            multiplyMatrixVector(triRotatedZ.p[2], triRotatedZX.p[2], matRotX);
-
-            //how far the object is
-            triTranslated = triRotatedZX;
-            triTranslated.p[0].z = triRotatedZX.p[0].z + 8.0f;
-            triTranslated.p[1].z = triRotatedZX.p[1].z + 8.0f;
-            triTranslated.p[2].z = triRotatedZX.p[2].z + 8.0f;
-
-            vec3d normal, line1, line2;
+            glm::vec3 normal, line1, line2;
             line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
             line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
             line1.z = triTranslated.p[1].z - triTranslated.p[0].z;
@@ -500,11 +493,35 @@ namespace py = pybind11;
             normal.z /= l;
 
             if(normal.x * (triTranslated.p[0].x - vCamera.x) + normal.y * (triTranslated.p[0].y - vCamera.y) + normal.z * (triTranslated.p[0].z - vCamera.z) < 0.0f){
-                
+            
+                /*
+                vec3d triTranslated2[3]; 
+                triTranslated2[0].x = triTranslated.p[0].x;
+                triTranslated2[0].y = triTranslated.p[0].y;
+                triTranslated2[0].z = triTranslated.p[0].z;
 
-                multiplyMatrixVector(triTranslated.p[0], triProjected.p[0], matProj);
-                multiplyMatrixVector(triTranslated.p[1], triProjected.p[1], matProj);
-                multiplyMatrixVector(triTranslated.p[2], triProjected.p[2], matProj);
+                triTranslated2[1].x = triTranslated.p[1].x;
+                triTranslated2[1].y = triTranslated.p[1].y;
+                triTranslated2[1].z = triTranslated.p[1].z;
+
+                triTranslated2[2].x = triTranslated.p[2].x;
+                triTranslated2[2].y = triTranslated.p[2].y;
+                triTranslated2[2].z = triTranslated.p[2].z;
+
+                multiplyMatrixVector(triTranslated2[0], triProjected.p[0], matProj);
+                multiplyMatrixVector(triTranslated2[1], triProjected.p[1], matProj);
+                multiplyMatrixVector(triTranslated2[2], triProjected.p[2], matProj);
+*/
+                triProjected.p[0] = matProj * triTranslated.p[0];
+                triProjected.p[1] = matProj * triTranslated.p[1];
+                triProjected.p[2] = matProj * triTranslated.p[2];
+                
+                for(int i = 0; i < 3; i++) {
+                    triProjected.p[i].x /= triProjected.p[i].w;
+                    triProjected.p[i].y /= triProjected.p[i].w;
+                    triProjected.p[i].z /= triProjected.p[i].w;
+                }
+
 
                 //Scale
                 triProjected.p[0].x += 1.0f; triProjected.p[0].y += 1.0f;
@@ -516,7 +533,6 @@ namespace py = pybind11;
 				triProjected.p[1].y *= 0.5f * (float)windowHeight;
 				triProjected.p[2].x *= 0.5f * (float)windowWidth;
 				triProjected.p[2].y *= 0.5f * (float)windowHeight;
-
                 
                 tria.push_back(triProjected);
             }
@@ -551,29 +567,184 @@ namespace py = pybind11;
 
     void Renderer2D::drawCube(){
         meshCube.tris = {
-            {0.0f, 0.0f, 0.0f,     0.0f, 1.0f,0.0f,       1.0f, 1.0f, 0.0f},
-            {0.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 0.0f, 0.0f},
+            {glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)},
+            {glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
 
-            {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,0.0f,       1.0f, 1.0f, 1.0f},
-            {1.0f, 0.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 0.0f, 1.0f},
+            {glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+            {glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f)},
 
-            {1.0f, 0.0f, 1.0f,     1.0f, 1.0f,1.0f,       0.0f, 1.0f, 1.0f},
-            {1.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 0.0f, 1.0f},
+            {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)},
+            {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)},
 
-            {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,1.0f,       0.0f, 1.0f, 0.0f},
-            {0.0f, 0.0f, 1.0f,     0.0f, 1.0f,0.0f,       0.0f, 0.0f, 0.0f},
+            {glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
+            {glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)},
 
-            {0.0f, 1.0f, 0.0f,     0.0f, 1.0f,1.0f,       1.0f, 1.0f, 1.0f},
-            {0.0f, 1.0f, 0.0f,     1.0f, 1.0f,1.0f,       1.0f, 1.0f, 0.0f},
+            {glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+            {glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)},
 
-            {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,1.0f,       0.0f, 0.0f, 0.0f},
-            {1.0f, 0.0f, 1.0f,     0.0f, 0.0f,0.0f,       1.0f, 0.0f, 0.0f},
+            {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)},
+            {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
 
         };
         simpleRender(meshCube);
     }
 
-    void Renderer2D::multiplyMatrixVector(vec3d &i, vec3d &o, mat4x4 &m){
+/*
+    bool mesh::LoadFromObjectFile(const std::string& sFilename) {
+        std::ifstream f(sFilename);
+        if (!f.is_open()) {
+            std::cerr << "ERROR: LoadFromObjectFile - Cannot open file: " << sFilename << std::endl;
+            return false;
+        }
+
+        std::vector<glm::vec3> temp_verts;
+        std::vector<glm::vec2> temp_texCoords;
+        std::vector<glm::vec3> temp_normals;
+
+        tris.clear();
+
+        std::string line;
+        int line_number = 0;
+        bool load_error = false;
+
+        while (std::getline(f, line)) {
+            line_number++;
+            std::stringstream ss(line);
+            std::string command;
+            ss >> command;
+
+            if (command.empty() || command[0] == '#') {
+                continue;
+
+            } else if (command == "v") {
+                glm::vec3 v;
+                if (!(ss >> v.x >> v.y >> v.z)) {
+                    std::cerr << "WARNING: Line " << line_number << ": Malformed vertex data." << std::endl;
+                    load_error = true; continue;
+                }
+                temp_verts.push_back(v);
+
+            } else if (command == "vt") {//for texture to be done
+                glm::vec2 vt;
+                if (!(ss >> vt.x >> vt.y)) {
+                    std::cerr << "WARNING: Line " << line_number << ": Malformed texture coordinate data." << std::endl;
+                    load_error = true; continue;
+                }
+                temp_texCoords.push_back(vt);
+
+            } else if (command == "vn") {// vertex normal
+                glm::vec3 vn;
+                if (!(ss >> vn.x >> vn.y >> vn.z)) {
+                    std::cerr << "WARNING: Line " << line_number << ": Malformed normal data." << std::endl;
+                    load_error = true; continue;
+                }
+                temp_normals.push_back(vn);
+
+            } else if (command == "f") {
+                std::vector<int> face_v_indices;
+                std::string face_chunk_str;
+                bool face_parse_error = false;
+
+                while (ss >> face_chunk_str) { 
+                    std::stringstream chunk_ss(face_chunk_str);
+                    std::string segment;
+                    int v_idx = 0, vt_idx = 0, vn_idx = 0; 
+                    int part = 0; 
+                    bool index_error = false;
+
+                    while (std::getline(chunk_ss, segment, '/')) {
+                        try {
+                            if (!segment.empty()) {
+                                int index = std::stoi(segment);
+
+                                if (index < 0) {
+                                    if (part == 0) index = static_cast<int>(temp_verts.size()) + index + 1;
+                                    else if (part == 1) index = static_cast<int>(temp_texCoords.size()) + index + 1;
+                                    else if (part == 2) index = static_cast<int>(temp_normals.size()) + index + 1;
+                                }
+
+                                if (part == 0) v_idx = index;
+                                else if (part == 1) vt_idx = index;
+                                else if (part == 2) vn_idx = index;
+
+                            } 
+                        } catch (const std::invalid_argument& ia) {
+                             std::cerr << "WARNING: Line " << line_number << ": Invalid index number in face chunk '" << face_chunk_str << "'" << std::endl;
+                             index_error = true; break;
+                        } catch (const std::out_of_range& oor) {
+                             std::cerr << "WARNING: Line " << line_number << ": Index number out of range in face chunk '" << face_chunk_str << "'" << std::endl;
+                             index_error = true; break;
+                        }
+                        part++;
+                        if (part > 2) break;
+                    }
+
+                    if (index_error) {
+                        face_parse_error = true; break; 
+                    }
+
+                    if (v_idx <= 0 || static_cast<size_t>(v_idx) > temp_verts.size()) {
+                         std::cerr << "WARNING: Line " << line_number << ": Vertex index " << v_idx
+                                   << " out of range (1 to " << temp_verts.size() << ") in chunk '" << face_chunk_str << "'." << std::endl;
+                         face_parse_error = true; break; // Stop processing this face line
+                    }
+                    face_v_indices.push_back(v_idx);
+                } 
+
+                if (face_parse_error) {
+                    load_error = true;
+                    continue; 
+                }
+                if (face_v_indices.size() >= 3) {
+                    int idx0_1based = face_v_indices[0];
+
+                    for (size_t i = 1; i < face_v_indices.size() - 1; ++i) {
+                        int idx1_1based = face_v_indices[i];
+                        int idx2_1based = face_v_indices[i + 1];
+
+                        int idx0_0based = idx0_1based - 1;
+                        int idx1_0based = idx1_1based - 1;
+                        int idx2_0based = idx2_1based - 1;
+
+                        if (idx0_0based >= 0 && idx0_0based < temp_verts.size() &&
+                            idx1_0based >= 0 && idx1_0based < temp_verts.size() &&
+                            idx2_0based >= 0 && idx2_0based < temp_verts.size())
+                        {
+                            tris.push_back({ glm::vec4(temp_verts[idx0_0based], temp_verts[idx1_0based], temp_verts[idx2_0based], 0.0f) });
+                            //here u can add features ;) 
+
+                          
+                        } else {
+                             std::cerr << "ERROR: Line " << line_number << ": Internal error - Invalid index during triangulation." << std::endl;
+                             load_error = true;
+                             break; 
+                        }
+                    }
+                } else if (!face_v_indices.empty()) {
+                    std::cerr << "WARNING: Line " << line_number << ": Face defined with less than 3 valid vertices." << std::endl;
+                    load_error = true;
+                }
+            }
+        } 
+
+        f.close();
+
+        if (load_error) {
+             std::cerr << "NOTE: Warnings or errors occurred during OBJ load of '" << sFilename << "'." << std::endl;
+        }
+
+        if (tris.empty() && !temp_verts.empty()) {
+             std::cerr << "WARNING: Loaded vertices but no valid faces found in '" << sFilename << "'." << std::endl;
+        } else if (tris.empty() && temp_verts.empty() && !load_error) {
+             std::cerr << "WARNING: File seems empty or contained no valid v/f data: '" << sFilename << "'." << std::endl;
+        }
+
+        std::cout << "Finished loading '" << sFilename << "'. Triangles loaded: " << tris.size() << std::endl;
+        return true;
+    }
+*/
+
+    void Renderer2D::multiplyMatrixVector(vec3d &i, glm::vec4 &o, mat4x4 &m){
         o.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + m.m[3][0];
         o.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + m.m[3][1];
         o.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + m.m[3][2];
@@ -584,4 +755,4 @@ namespace py = pybind11;
             o.y /= w;
             o.z /= w;
         }
-    } 
+    }
