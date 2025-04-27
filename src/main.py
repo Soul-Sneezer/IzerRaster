@@ -7,7 +7,7 @@ class CustomRenderer(IzerRaster.Renderer2D):
         self.object_loaded = False
 
     def setup_scene(self):
-        obj_path = "C:/Users/pasca/IzerRaster/obj/IronMan.obj"
+        obj_path = "C:/Users/pasca/IzerRaster/obj/VideoShip.obj"
         self.object_loaded = self.load_obj(obj_path)
 
     def UserDraw(self):
