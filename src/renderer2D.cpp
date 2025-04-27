@@ -453,7 +453,7 @@ namespace py = pybind11;
     }
 
     void Renderer2D::loadObj(std::string path){
-        //obj.LoadFromObjectFile("C:/Users/pasca/IzerRaster/obj/IronMan.obj");
+        obj.LoadFromObjectFile(path);
         simpleRender(obj);
     }
 
@@ -542,7 +542,7 @@ namespace py = pybind11;
                static_cast<int>(triToRaster.p[0].x), static_cast<int>(triToRaster.p[0].y),
                static_cast<int>(triToRaster.p[1].x), static_cast<int>(triToRaster.p[1].y),
                static_cast<int>(triToRaster.p[2].x), static_cast<int>(triToRaster.p[2].y),
-               RGBA(100,100,100,255)
+               RGBA(100,100,100,200)
            );
         
        }
