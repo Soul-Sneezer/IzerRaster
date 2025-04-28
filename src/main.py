@@ -7,8 +7,9 @@ class CustomRenderer(IzerRaster.Renderer2D):
         self.object_loaded = False
 
     def setup_scene(self):
-        obj_path = "C:/Users/pasca/IzerRaster/obj/VideoShip.obj"
-        self.object_loaded = self.load_obj(obj_path)
+        obj_path = "suzanne.obj"
+        self.object_loaded = self.loadObj(obj_path)
+        print(self.object_loaded)
 
     def UserDraw(self):
         # self.drawPoint(250, 200, IzerRaster.RGBA(250, 100, 0, 0))
@@ -20,8 +21,7 @@ class CustomRenderer(IzerRaster.Renderer2D):
        # self.fillRect(200, 200, 400, 400, IzerRaster.RGBA(0, 120, 180, 255))
        # self.fillTriangle(400, 400, 300, 300, 400, 200,
        #  IzerRaster.RGBA(200, 200, 200, 200))
-        self.drawObj()
-
+        self.drawObj(self.object_loaded)
 
 renderer2D = CustomRenderer("Testing", 1920, 1080)
 renderer2D.Init()

@@ -19,6 +19,11 @@ class PyRenderer2D : public Renderer2D
         {
             PYBIND11_OVERRIDE(void, Renderer2D, UserInit);
         }
+
+        void HandleEvents() override 
+        {
+            PYBIND11_OVERRIDE(void, Renderer2D, HandleEvents);
+        }
 };
 
 PYBIND11_MODULE(IzerRaster, m)
@@ -40,6 +45,9 @@ PYBIND11_MODULE(IzerRaster, m)
                            " a=" + std::to_string(c.a) + ">";
                 });
 
+    py::class_<mesh>(m, "Mesh")
+           .def("LoadFromObjectFile", &mesh::LoadFromObjectFile);
+
     py::class_<Renderer2D, PyRenderer2D>(m, "Renderer2D")
         .def(py::init<const std::string&, int, int>(),
                 py::arg("appName") = "Renderer2D",
@@ -59,6 +67,6 @@ PYBIND11_MODULE(IzerRaster, m)
         .def("drawTriangle", &Renderer2D::drawTriangle)
         .def("fillTriangle", &Renderer2D::fillTriangle)
         .def("drawCube", &Renderer2D::drawCube)
-        .def("load_obj", &Renderer2D::loadObj,py::arg("filename"))
+        .def("loadObj", &Renderer2D::loadObj,py::arg("filename"))
         .def("drawObj", &Renderer2D::drawObj);
 }

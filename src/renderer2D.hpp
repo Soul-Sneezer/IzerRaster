@@ -29,19 +29,6 @@ struct RGBA
     RGBA() : r(0), g(0), b(0), a(255) {}
 };
 
-struct vec3d{
-    float x,y,z;
-};
-
-
-struct vec2d{
-    float u,v;
-};
-
-struct mat4x4{
-    float m[4][4] = {0};
-};
-
 struct triangle{
     glm::vec4 p[3];
 };
@@ -63,9 +50,9 @@ private:
     //stuff for projections
     mesh meshCube;
     mesh obj;
-    glm::mat4 matRotX, matRotZ, matTrans, matProj;
-    float fTheta;
-    glm::vec4 vCamera;
+    glm::mat4 rotX, rotZ, transl, proj;
+    float theta;
+    glm::vec4 cameraPos;
 
     
     TTF_Font* font; 
@@ -85,10 +72,10 @@ public:
     void Init();
 
     void Run();
-    void HandleEvents(); // WIP
+    virtual void HandleEvents(); // WIP
     void Render();
     virtual void UserDraw(); // override this to draw
-    virtual void UserInit();
+    virtual void UserInit(); // override this to perform actions during initialization
     void Quit();
     void clearScreen();
     void update(float deltaTime);
@@ -104,7 +91,6 @@ public:
     void fillTopFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
     void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
     void drawCube();
-    void loadObj(std::string path);
-    void drawObj();
-    void multiplyMatrixVector(vec3d &i, glm::vec4 &o, mat4x4 &m); 
+    mesh loadObj(std::string path);
+    void drawObj(mesh obj);
 };

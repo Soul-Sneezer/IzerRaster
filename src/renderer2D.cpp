@@ -60,17 +60,17 @@
         float fAspectRatio = (float)windowWidth / (float)windowHeight;
         //float fFovRad = 1.0/ tanf(fFov * 0.5f / 180.0f * 3.14159f);
 
-        matProj = glm::perspective(glm::radians(fFov), fAspectRatio, fNear, fFar);
+        proj = glm::perspective(glm::radians(fFov), fAspectRatio, fNear, fFar);
 
        /*
-        matProj.m[0][0] = fAspectRatio * fFovRad;
-        matProj.m[1][1] = fFovRad;
-        matProj.m[2][2] = fFar / (fFar - fNear);
-        matProj.m[2][3] = 1.0f;
-        matProj.m[3][2] = (-fFar * fNear) / (fFar - fNear);
-        matProj.m[3][3] = 0.0f;
+        proj.m[0][0] = fAspectRatio * fFovRad;
+        proj.m[1][1] = fFovRad;
+        proj.m[2][2] = fFar / (fFar - fNear);
+        proj.m[2][3] = 1.0f;
+        proj.m[3][2] = (-fFar * fNear) / (fFar - fNear);
+        proj.m[3][3] = 0.0f;
        */
-        vCamera = glm::vec4{0};
+        cameraPos = glm::vec4{0};
         
         isRunning = true;
 
@@ -430,35 +430,21 @@
     }
 
     void Renderer2D::update(float deltaTime){
-    fTheta += 1.0f * deltaTime; 
+    theta += 1.0f * deltaTime; 
 
-    matRotZ = glm::rotate(fTheta, glm::vec3(0,0,1));
-    /*
-    matRotZ.m[0][0] = cosf(fTheta);
-    matRotZ.m[0][1] = sinf(fTheta);
-    matRotZ.m[1][0] = -sinf(fTheta);
-    matRotZ.m[1][1] = cosf(fTheta);
-    matRotZ.m[2][2] = 1;
-    matRotZ.m[3][3] = 1;
-*/
-    matRotX = glm::rotate(fTheta, glm::vec3(1,0,0));
-    /*
-    matRotX.m[0][0] = 1;
-    matRotX.m[1][1] = cosf(fTheta * 0.5f);
-    matRotX.m[1][2] = sinf(fTheta * 0.5f);
-    matRotX.m[2][1] = -sinf(fTheta * 0.5f);
-    matRotX.m[2][2] = cosf(fTheta * 0.5f);
-    matRotX.m[3][3] = 1;
-    */
+    rotZ = glm::rotate(theta, glm::vec3(0,0,1));
+    rotX = glm::rotate(theta, glm::vec3(1,0,0));
 
     }
 
-    void Renderer2D::loadObj(std::string path){
+    mesh Renderer2D::loadObj(std::string path){
+        mesh obj;
         obj.LoadFromObjectFile(path);
-        simpleRender(obj);
+        
+        return obj;
     }
 
-    void Renderer2D::drawObj(){
+    void Renderer2D::drawObj(mesh obj){
         simpleRender(obj);
     }
 
@@ -468,11 +454,11 @@
         for(auto tri: meshObj.tris){
             triangle triProjected, triTranslated;
 
-            glm::mat4 matTrans = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
+            glm::mat4 transl = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
             
-            triTranslated.p[0] = matTrans * matRotX * matRotZ * tri.p[0];
-            triTranslated.p[1] = matTrans * matRotX * matRotZ * tri.p[1];
-            triTranslated.p[2] = matTrans * matRotX * matRotZ * tri.p[2];
+            triTranslated.p[0] = transl * rotX * rotZ * tri.p[0];
+            triTranslated.p[1] = transl * rotX * rotZ * tri.p[1];
+            triTranslated.p[2] = transl * rotX * rotZ * tri.p[2];
 
             glm::vec3 normal, line1, line2;
             line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
@@ -492,29 +478,11 @@
             normal.y /= l;
             normal.z /= l;
 
-            if(normal.x * (triTranslated.p[0].x - vCamera.x) + normal.y * (triTranslated.p[0].y - vCamera.y) + normal.z * (triTranslated.p[0].z - vCamera.z) < 0.0f){
+            if(normal.x * (triTranslated.p[0].x - cameraPos.x) + normal.y * (triTranslated.p[0].y - cameraPos.y) + normal.z * (triTranslated.p[0].z - cameraPos.z) < 0.0f){
             
-                /*
-                vec3d triTranslated2[3]; 
-                triTranslated2[0].x = triTranslated.p[0].x;
-                triTranslated2[0].y = triTranslated.p[0].y;
-                triTranslated2[0].z = triTranslated.p[0].z;
-
-                triTranslated2[1].x = triTranslated.p[1].x;
-                triTranslated2[1].y = triTranslated.p[1].y;
-                triTranslated2[1].z = triTranslated.p[1].z;
-
-                triTranslated2[2].x = triTranslated.p[2].x;
-                triTranslated2[2].y = triTranslated.p[2].y;
-                triTranslated2[2].z = triTranslated.p[2].z;
-
-                multiplyMatrixVector(triTranslated2[0], triProjected.p[0], matProj);
-                multiplyMatrixVector(triTranslated2[1], triProjected.p[1], matProj);
-                multiplyMatrixVector(triTranslated2[2], triProjected.p[2], matProj);
-*/
-                triProjected.p[0] = matProj * triTranslated.p[0];
-                triProjected.p[1] = matProj * triTranslated.p[1];
-                triProjected.p[2] = matProj * triTranslated.p[2];
+                triProjected.p[0] = proj * triTranslated.p[0];
+                triProjected.p[1] = proj * triTranslated.p[1];
+                triProjected.p[2] = proj * triTranslated.p[2];
                 
                 for(int i = 0; i < 3; i++) {
                     triProjected.p[i].x /= triProjected.p[i].w;
@@ -552,7 +520,7 @@
                static_cast<int>(triToRaster.p[0].x), static_cast<int>(triToRaster.p[0].y),
                static_cast<int>(triToRaster.p[1].x), static_cast<int>(triToRaster.p[1].y),
                static_cast<int>(triToRaster.p[2].x), static_cast<int>(triToRaster.p[2].y),
-               RGBA(200,200,200,200)
+               RGBA(200,200,200,255)
            );
             drawTriangle(
                static_cast<int>(triToRaster.p[0].x), static_cast<int>(triToRaster.p[0].y),
@@ -589,7 +557,6 @@
         simpleRender(meshCube);
     }
 
-/*
     bool mesh::LoadFromObjectFile(const std::string& sFilename) {
         std::ifstream f(sFilename);
         if (!f.is_open()) {
@@ -597,7 +564,7 @@
             return false;
         }
 
-        std::vector<glm::vec3> temp_verts;
+        std::vector<glm::vec4> temp_verts;
         std::vector<glm::vec2> temp_texCoords;
         std::vector<glm::vec3> temp_normals;
 
@@ -617,11 +584,12 @@
                 continue;
 
             } else if (command == "v") {
-                glm::vec3 v;
+                glm::vec4 v;
                 if (!(ss >> v.x >> v.y >> v.z)) {
                     std::cerr << "WARNING: Line " << line_number << ": Malformed vertex data." << std::endl;
                     load_error = true; continue;
                 }
+                v.w = 1.0f;
                 temp_verts.push_back(v);
 
             } else if (command == "vt") {//for texture to be done
@@ -710,7 +678,7 @@
                             idx1_0based >= 0 && idx1_0based < temp_verts.size() &&
                             idx2_0based >= 0 && idx2_0based < temp_verts.size())
                         {
-                            tris.push_back({ glm::vec4(temp_verts[idx0_0based], temp_verts[idx1_0based], temp_verts[idx2_0based], 0.0f) });
+                            tris.push_back({ temp_verts[idx0_0based], temp_verts[idx1_0based], temp_verts[idx2_0based] });
                             //here u can add features ;) 
 
                           
@@ -741,18 +709,4 @@
 
         std::cout << "Finished loading '" << sFilename << "'. Triangles loaded: " << tris.size() << std::endl;
         return true;
-    }
-*/
-
-    void Renderer2D::multiplyMatrixVector(vec3d &i, glm::vec4 &o, mat4x4 &m){
-        o.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + m.m[3][0];
-        o.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + m.m[3][1];
-        o.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + m.m[3][2];
-        float w = i.x * m.m[0][3] + i.y * m.m[1][3] + i.z * m.m[2][3] + m.m[3][3];
-
-        if(w != 0.0f){
-            o.x /= w;
-            o.y /= w;
-            o.z /= w;
-        }
     }
