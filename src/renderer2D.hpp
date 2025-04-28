@@ -56,7 +56,6 @@ private:
 
     
     TTF_Font* font; 
-    uint32_t lastTime = SDL_GetTicks(); // Time since SDL_Init
     uint32_t frameCount = 0;            // Frames since last FPS update
     uint32_t fps = 0;                   // Current FPS value
     char fpsString[32] = "FPS: 0";
@@ -65,12 +64,21 @@ private:
     int windowWidth;
     int windowHeight;
 
-    void drawHorizontalLine(int y, int x1, int x2, RGBA rgba);
-public:
-    Renderer2D(const std::string appName = "Renderer2D", int width = 640, int height = 480);
-    
-    void Init();
+    static uint64_t lastTime;
 
+    void drawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2, RGBA rgba);
+    void update(float deltaTime);
+    void simpleRender(mesh meshObj);
+    void fillBottomFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
+    void fillTopFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
+
+public:
+    Renderer2D(const std::string appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480);
+    
+    mesh applyRenderMatrix(glm::mat4 mat, mesh objMesh);
+    void Init();
+    uint64_t GetCurrentTime();
+    float GetDeltaTime();
     void Run();
     virtual void HandleEvents(); // WIP
     void Render();
@@ -78,18 +86,14 @@ public:
     virtual void UserInit(); // override this to perform actions during initialization
     void Quit();
     void clearScreen();
-    void update(float deltaTime);
-    void simpleRender(mesh meshObj);
-    void drawPoint(int x, int y, RGBA rgba);
-    void drawLine(int x1, int y1, int x2, int y2, RGBA rgba);
-    void drawRect(int x1, int y1, int x2, int y2, RGBA rgba);
-    void fillRect(int x1, int y1, int x2, int y2, RGBA rgba);
-    void drawCircle(int x, int y, int radius, RGBA rgba);
-    void fillCircle(int x, int y, int radius, RGBA rgba);
-    void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
-    void fillBottomFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
-    void fillTopFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
-    void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba);
+    void drawPoint(uint16_t x, uint16_t y, RGBA rgba);
+    void drawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, RGBA rgba);
+    void drawRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, RGBA rgba);
+    void fillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, RGBA rgba);
+    void drawCircle(uint16_t x, uint16_t y, uint16_t radius, RGBA rgba);
+    void fillCircle(uint16_t x, uint16_t y, uint16_t radius, RGBA rgba);
+    void drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
+    void fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void drawCube();
     mesh loadObj(std::string path);
     void drawObj(mesh obj);

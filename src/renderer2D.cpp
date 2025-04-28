@@ -7,7 +7,9 @@
 #include <sstream>
 #include <cmath>
 
-    Renderer2D::Renderer2D(const std::string appName, int width, int height) : appName(appName), windowWidth(width), windowHeight(height)
+    uint64_t Renderer2D::lastTime = 0;
+
+    Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t height) : appName(appName), windowWidth(width), windowHeight(height)
     {
 
     }
@@ -58,18 +60,9 @@
         float fFar = 1000.0f;
         float fFov = 60.0f;
         float fAspectRatio = (float)windowWidth / (float)windowHeight;
-        //float fFovRad = 1.0/ tanf(fFov * 0.5f / 180.0f * 3.14159f);
 
         proj = glm::perspective(glm::radians(fFov), fAspectRatio, fNear, fFar);
 
-       /*
-        proj.m[0][0] = fAspectRatio * fFovRad;
-        proj.m[1][1] = fFovRad;
-        proj.m[2][2] = fFar / (fFar - fNear);
-        proj.m[2][3] = 1.0f;
-        proj.m[3][2] = (-fFar * fNear) / (fFar - fNear);
-        proj.m[3][3] = 0.0f;
-       */
         cameraPos = glm::vec4{0};
         
         isRunning = true;
@@ -77,37 +70,47 @@
         UserInit();
     }
 
+    uint64_t Renderer2D::GetCurrentTime()
+    {
+        return SDL_GetTicks();
+    }
+
+    float Renderer2D::GetDeltaTime()
+    {
+        return (GetCurrentTime() - Renderer2D::lastTime) / 1000.0f;
+    }
+
     //While Running
     void Renderer2D::Run()
     {
-        Uint64 lastTime = SDL_GetTicks();
+        Renderer2D::lastTime = GetCurrentTime();
         while (isRunning)
         {
-            Uint64 currentTime = SDL_GetTicks();
-            float deltaTime = (currentTime - lastTime) / 1000.0f;
-            lastTime = currentTime;
-    
+            float deltaTime = GetDeltaTime();
+            Renderer2D::lastTime = GetCurrentTime();
+   
+            SDL_Event event;
+
+            while (SDL_PollEvent(&event))
+            {
+                switch (event.type)
+                {
+                    case SDL_EVENT_QUIT:
+                        isRunning  = false;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
             HandleEvents();
-            update(deltaTime); 
             Render();
         }
     }
 
     void Renderer2D::HandleEvents()
     {
-        SDL_Event event;
-
-        while (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
-                case SDL_EVENT_QUIT:
-                    isRunning  = false;
-                    break;
-                default:
-                    break;
-            }
-        }
+        
     }
 
     void Renderer2D::Render()
@@ -162,7 +165,7 @@
         std::fill(screenBuffer.begin(), screenBuffer.end(), RGBA());
     }
 
-    void Renderer2D::drawPoint(int x, int y, RGBA rgba)
+    void Renderer2D::drawPoint(uint16_t x, uint16_t y, RGBA rgba)
     {
         if (y < 0 || y >= windowHeight || x < 0 || x >= windowWidth)
             return;
@@ -170,7 +173,7 @@
         this->screenBuffer[y * windowWidth + x] = rgba; 
     }
 
-    void Renderer2D::drawLine(int x1, int y1, int x2, int y2, RGBA rgba) // Brensenham's Line Algorithm
+    void Renderer2D::drawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, RGBA rgba) // Brensenham's Line Algorithm
     {
         int dx = std::abs(x2 - x1);
         int dy = - std::abs(y2 - y1);
@@ -208,7 +211,7 @@
 
     }
 
-    void Renderer2D::drawRect(int x1, int y1, int x2, int y2, RGBA rgba)
+    void Renderer2D::drawRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, RGBA rgba)
     {
        drawLine(x1, y1, x2, y1, rgba);
        drawLine(x1, y1, x1, y2, rgba);
@@ -216,14 +219,14 @@
        drawLine(x2, y2, x2, y1, rgba);
     }
 
-    void Renderer2D::fillRect(int x1, int y1, int x2, int y2, RGBA rgba)
+    void Renderer2D::fillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, RGBA rgba)
     {
         int startX = std::min(x1, x2);
         int startY = std::min(y1, y2);
         int endX = std::max(x1, x2);
         int endY = std::max(y1, y2);
 
-        for(int y = startY; y < endY; y++)
+        for(uint16_t y = startY; y < endY; y++)
         {
             drawHorizontalLine(y, startX, endX, rgba);
         }
@@ -231,7 +234,7 @@
 
 
     // https://en.wikipedia.org/wiki/Midpoint_circle_algorithm 
-    void Renderer2D::drawCircle(int x, int y, int radius, RGBA rgba)
+    void Renderer2D::drawCircle(uint16_t x, uint16_t y, uint16_t radius, RGBA rgba)
     {
         if (radius < 0)
             return;
@@ -280,7 +283,7 @@
         }
     }
     
-    void Renderer2D::drawHorizontalLine(int y, int x1, int x2, RGBA rgba)
+    void Renderer2D::drawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2, RGBA rgba)
     {
         if (x1 > x2)
             std::swap(x1, x2);
@@ -288,8 +291,8 @@
         if (y < 0 || y >= windowHeight)
             return; 
 
-        int startX = std::max(0, x1);
-        int endX = std::min(windowWidth, x2 + 1);
+        uint16_t startX = x1;
+        uint16_t endX = std::min(windowWidth, x2 + 1);
 
         if (startX >= endX)
             return; 
@@ -298,7 +301,7 @@
         std::fill(rowStart, rowStart + (endX - startX), rgba);
     }
 
-    void Renderer2D::fillCircle(int x, int y, int radius, RGBA rgba)
+    void Renderer2D::fillCircle(uint16_t x, uint16_t y, uint16_t radius, RGBA rgba)
     {
         if (radius < 0)
             return;
@@ -310,12 +313,12 @@
         }
         
         // midpoint circle algorithm 
-        int startX = 0;
-        int startY = radius;
+        uint16_t startX = 0;
+        uint16_t startY = radius;
 
         int decision = 3 - 2 * radius;
 
-        auto plotHorizontalLines = [&](int offsetX, int offsetY) // this is the only thing that changes from the drawCircle function
+        auto plotHorizontalLines = [&](uint16_t offsetX, uint16_t offsetY) // this is the only thing that changes from the drawCircle function
         {
             drawHorizontalLine(y + offsetY, x - offsetX, x + offsetX, rgba); // bottom
 
@@ -346,14 +349,14 @@
         }
     }
 
-    void Renderer2D::drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba)
+    void Renderer2D::drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba)
     {
         drawLine(x1, y1, x2, y2, rgba);
         drawLine(x2, y2, x3, y3, rgba);
         drawLine(x1, y1, x3, y3, rgba);
     }
 
-    void Renderer2D::fillBottomFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba)
+    void Renderer2D::fillBottomFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba)
     {
         float slope1 = (float)(x2 - x1) / (y2 - y1);
         float slope2 = (float)(x3 - x1) / (y3 - y1);
@@ -361,15 +364,15 @@
         float currentX1 = x1;
         float currentX2 = x1;
 
-        for (int startY = y1; startY <= y2; startY++)
+        for (uint16_t startY = y1; startY <= y2; startY++)
         {
-            drawHorizontalLine(startY, (int)currentX1, (int)currentX2, rgba);
+            drawHorizontalLine(startY, (uint16_t)currentX1, (uint16_t)currentX2, rgba);
             currentX1 += slope1;
             currentX2 += slope2;
         }
     }
 
-    void Renderer2D::fillTopFlatTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba)
+    void Renderer2D::fillTopFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba)
     {
         float slope1 = (float)(x2 - x1) / (y2 - y1);
         float slope2 = (float)(x3 - x1) / (y3 - y1);
@@ -377,9 +380,9 @@
         float currentX1 = x1;
         float currentX2 = x1;
 
-        for (int startY = y1; startY >= y2; startY--)
+        for (uint16_t startY = y1; startY >= y2; startY--)
         {
-            drawHorizontalLine(startY, (int)currentX1, (int)currentX2, rgba);
+            drawHorizontalLine(startY, (uint16_t)currentX1, (uint16_t)currentX2, rgba);
             currentX1 -= slope1;
             currentX2 -= slope2;
         }
@@ -388,19 +391,19 @@
     // https://www.sunshine2k.de/coding/java/TriangleRasterization/TriangleRasterization.html
     // https://gamedev.stackexchange.com/questions/178181/how-can-i-draw-filled-triangles-in-c
     // https://www.gabrielgambetta.com/computer-graphics-from-scratch/07-filled-triangles.html
-    void Renderer2D::fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, RGBA rgba) // scanline triangle rasterization algorithm
+    void Renderer2D::fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba) // scanline triangle rasterization algorithm
     {
-        std::vector<std::pair<int, int>> vertices;
+        std::vector<std::pair<uint16_t, uint16_t>> vertices;
         vertices.push_back(std::make_pair(x1, y1));
         vertices.push_back(std::make_pair(x2, y2));
         vertices.push_back(std::make_pair(x3, y3));
 
-        std::sort(vertices.begin(), vertices.end(), [](const std::pair<int, int> a, const std::pair<int, int> b) {
+        std::sort(vertices.begin(), vertices.end(), [](const std::pair<uint16_t, uint16_t> a, const std::pair<uint16_t, uint16_t> b) {
                 return (a.second < b.second) || (a.second == b.second && a.first < b.first); });
 
-        std::pair<int, int> v0 = vertices[0];
-        std::pair<int, int> v1 = vertices[1];
-        std::pair<int, int> v2 = vertices[2];
+        std::pair<uint16_t, uint16_t> v0 = vertices[0];
+        std::pair<uint16_t, uint16_t> v1 = vertices[1];
+        std::pair<uint16_t, uint16_t> v2 = vertices[2];
 
        // so you basically divide the triangle further into two triangles
        // one with a flat bottom and one with a flat top
@@ -423,18 +426,26 @@
         else
         {
             // create a new vertex
-            std::pair<int, int> v3 = std::make_pair(v0.first + (int)((float)(v1.second - v0.second) / (v2.second - v0.second) * (v2.first - v0.first)), v1.second);
+            std::pair<uint16_t, uint16_t> v3 = std::make_pair(v0.first + (uint16_t)((float)(v1.second - v0.second) / (v2.second - v0.second) * (v2.first - v0.first)), v1.second);
             fillBottomFlatTriangle(v0.first, v0.second, v1.first, v1.second, v3.first, v3.second, rgba);
             fillTopFlatTriangle(v2.first, v2.second, v3.first, v3.second, v1.first, v1.second, rgba);
         }
     }
 
-    void Renderer2D::update(float deltaTime){
-    theta += 1.0f * deltaTime; 
+    mesh Renderer2D::applyRenderMatrix(glm::mat4 mat, mesh objMesh)
+    {
+        mesh newMesh;
+        for (auto tri : objMesh.tris)
+        {
+            triangle newTri;
+            newTri.p[0] = mat * tri.p[0];
+            newTri.p[1] = mat * tri.p[1];
+            newTri.p[2] = mat * tri.p[2];
 
-    rotZ = glm::rotate(theta, glm::vec3(0,0,1));
-    rotX = glm::rotate(theta, glm::vec3(1,0,0));
+            newMesh.tris.push_back(newTri);
+        }
 
+        return newMesh;
     }
 
     mesh Renderer2D::loadObj(std::string path){
@@ -451,14 +462,13 @@
     void Renderer2D::simpleRender(mesh meshObj){
         std::vector<triangle> tria;
 
-        for(auto tri: meshObj.tris){
-            triangle triProjected, triTranslated;
+        triangle triProjected;
 
-            glm::mat4 transl = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
-            
-            triTranslated.p[0] = transl * rotX * rotZ * tri.p[0];
-            triTranslated.p[1] = transl * rotX * rotZ * tri.p[1];
-            triTranslated.p[2] = transl * rotX * rotZ * tri.p[2];
+        //glm::mat4 transl = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
+       
+        //mesh newMesh = applyRenderMatrix(transl * rotX * rotZ, meshObj);
+           
+        for(auto triTranslated: meshObj.tris){
 
             glm::vec3 normal, line1, line2;
             line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
@@ -479,7 +489,7 @@
             normal.z /= l;
 
             if(normal.x * (triTranslated.p[0].x - cameraPos.x) + normal.y * (triTranslated.p[0].y - cameraPos.y) + normal.z * (triTranslated.p[0].z - cameraPos.z) < 0.0f){
-            
+           
                 triProjected.p[0] = proj * triTranslated.p[0];
                 triProjected.p[1] = proj * triTranslated.p[1];
                 triProjected.p[2] = proj * triTranslated.p[2];
@@ -517,15 +527,15 @@
 
         for (const auto& triToRaster : tria) {
             fillTriangle(
-               static_cast<int>(triToRaster.p[0].x), static_cast<int>(triToRaster.p[0].y),
-               static_cast<int>(triToRaster.p[1].x), static_cast<int>(triToRaster.p[1].y),
-               static_cast<int>(triToRaster.p[2].x), static_cast<int>(triToRaster.p[2].y),
+               static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
+               static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
+               static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
                RGBA(200,200,200,255)
            );
             drawTriangle(
-               static_cast<int>(triToRaster.p[0].x), static_cast<int>(triToRaster.p[0].y),
-               static_cast<int>(triToRaster.p[1].x), static_cast<int>(triToRaster.p[1].y),
-               static_cast<int>(triToRaster.p[2].x), static_cast<int>(triToRaster.p[2].y),
+               static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
+               static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
+               static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
                RGBA(100,100,100,200)
            );
         
@@ -571,7 +581,7 @@
         tris.clear();
 
         std::string line;
-        int line_number = 0;
+        uint32_t line_number = 0;
         bool load_error = false;
 
         while (std::getline(f, line)) {
