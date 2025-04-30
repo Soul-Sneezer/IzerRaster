@@ -15,7 +15,7 @@
 #include <sstream>
 #include <stdexcept> 
 #include <iostream> 
-
+#include <optional>
 
 struct RGBA 
 {
@@ -29,14 +29,24 @@ struct RGBA
     RGBA() : r(0), g(0), b(0), a(255) {}
 };
 
-struct triangle{
+struct triangle
+{
     glm::vec4 p[3];
 };
 
-struct mesh {
+struct mesh 
+{
     std::vector<triangle> tris;
 
     bool LoadFromObjectFile(const std::string& sFilename);
+};
+
+struct InputEvent 
+{
+    std::string type;
+    int key;
+    int mouseX;
+    int mouseY;
 };
 
 class Renderer2D
@@ -80,9 +90,8 @@ public:
     uint64_t GetCurrentTime();
     float GetDeltaTime();
     void Run();
-    virtual void HandleEvents(); // WIP
     void Render();
-    virtual void UserDraw(); // override this to draw
+    virtual void UserUpdate(); // override this to draw
     virtual void UserInit(); // override this to perform actions during initialization
     void Quit();
     void clearScreen();
@@ -97,4 +106,6 @@ public:
     void drawCube();
     mesh loadObj(std::string path);
     void drawObj(mesh obj);
+    std::vector<InputEvent> poolInputEvents();
+    std::optional<InputEvent> detectInputEvent();
 };

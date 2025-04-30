@@ -103,14 +103,8 @@
                 }
             }
 
-            HandleEvents();
             Render();
         }
-    }
-
-    void Renderer2D::HandleEvents()
-    {
-        
     }
 
     void Renderer2D::Render()
@@ -120,7 +114,7 @@
 
         clearScreen();
 
-        UserDraw();
+        UserUpdate();
         
         SDL_UpdateTexture(screenTexture, nullptr, screenBuffer.data(),  windowWidth * sizeof(RGBA));
 
@@ -133,7 +127,7 @@
     {
     }
 
-    void Renderer2D::UserDraw()
+    void Renderer2D::UserUpdate()
     {
     }
 
@@ -719,4 +713,108 @@
 
         std::cout << "Finished loading '" << sFilename << "'. Triangles loaded: " << tris.size() << std::endl;
         return true;
+    }
+
+    std::optional<InputEvent> Renderer2D::detectInputEvent()
+    {
+         SDL_Event event;
+
+        while (SDL_PollEvent(&event))
+        {
+            InputEvent input;
+
+            switch(event.type)
+            {
+                case SDL_EVENT_KEY_DOWN:
+                    input.type = "KEYDOWN";
+                    input.key = event.key.key;
+                    break; 
+                case SDL_EVENT_KEY_UP:
+                    input.type = "KEYUP";
+                    input.key = event.key.key;
+                    break;
+                case SDL_EVENT_MOUSE_MOTION:
+                    input.type = "MOUSEMOTION";
+                    input.mouseX = event.motion.x;
+                    input.mouseY = event.motion.y;
+                    break;
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                    input.type = "MOUSEDOWN";
+                    input.key = event.button.button;
+                    input.mouseX = event.motion.x;
+                    input.mouseY = event.motion.y;
+                    break;
+                case SDL_EVENT_MOUSE_BUTTON_UP:
+                    input.type = "MOUSEUP";
+                    input.key = event.button.button;
+                    input.mouseX = event.motion.x;
+                    input.mouseY = event.motion.y;
+                    break;
+                case SDL_EVENT_MOUSE_WHEEL:
+                    input.type = "MOUSEWHEEL";
+                    input.key = event.button.button;
+                    input.mouseX = event.motion.x;
+                    input.mouseY = event.motion.y;
+                    break;
+                default:
+                    return std::nullopt;
+            }
+
+            return input;
+        }
+
+        return std::nullopt;;
+
+    }
+
+    std::vector<InputEvent> Renderer2D::poolInputEvents()
+    {
+        std::vector<InputEvent> events;
+        SDL_Event event;
+
+        while (SDL_PollEvent(&event))
+        {
+            InputEvent input;
+
+            switch(event.type)
+            {
+                case SDL_EVENT_KEY_DOWN:
+                    input.type = "KEYDOWN";
+                    input.key = event.key.key;
+                    break; 
+                case SDL_EVENT_KEY_UP:
+                    input.type = "KEYUP";
+                    input.key = event.key.key;
+                    break;
+                case SDL_EVENT_MOUSE_MOTION:
+                    input.type = "MOUSEMOTION";
+                    input.mouseX = event.motion.x;
+                    input.mouseY = event.motion.y;
+                    break;
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                    input.type = "MOUSEDOWN";
+                    input.key = event.button.button;
+                    input.mouseX = event.motion.x;
+                    input.mouseY = event.motion.y;
+                    break;
+                case SDL_EVENT_MOUSE_BUTTON_UP:
+                    input.type = "MOUSEUP";
+                    input.key = event.button.button;
+                    input.mouseX = event.motion.x;
+                    input.mouseY = event.motion.y;
+                    break;
+                case SDL_EVENT_MOUSE_WHEEL:
+                    input.type = "MOUSEWHEEL";
+                    input.key = event.button.button;
+                    input.mouseX = event.motion.x;
+                    input.mouseY = event.motion.y;
+                    break;
+                default:
+                    continue;
+            }
+
+            events.push_back(input);
+        }
+
+        return events;
     }
