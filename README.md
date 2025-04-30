@@ -1,6 +1,119 @@
 # IzerRaster
 IzerRaster is a rasterizer. What is a rasterizer? A rasterizer takes 3D models and projects them to a 2D surface, that 2D surface being the computer screen.
 
+Currently the library has two main features: 
+- it can load and render 3D models and basic 2D shapes(triangles, rectangles, circles)
+- it can handle input events from the mouse or keyboard
+
+The IzerRaster library has a core loop, named UserUpdate(), that runs once per frame. And a UserInit() function, which runs right after the basic Init() function that initializes everything. The user should override the "UserUpdate", "UserInit" function when defining the renderer class.
+
+The drawing/rendering and input handling functions should be called from UserUpdate.
+
+In order to render an object you need to:
+- Load the object, using the _loadObj_ function. It takes a path as argument, and can only load .obj files. It then returns a _mesh_ object
+- You can then modify the _mesh_ object using the _applyRenderMatrix_ function, which takes 2 arguments: a render matrix and a mesh
+- Then you render the object using the _drawObj_ and passing the mesh as an argument
+  
+**IzerRaster** also has a few drawing functions:
+- *drawPoint* - takes 3 arguments, the first is the X coordinate, the second is the Y coordinate and the last one is the color in RGBA format
+- *drawLine* - takes 5 arguments, the first two are the X,Y coordinates of the first point of the line, then the X,Y coordinates of the second point of the line, and the color
+- *drawRect* - takes 5 arguments, the first two are the X,Y coordinates of the lower left corner point, the following two are the X,Y coordinates of the upper right corner point, and then the color
+- *drawTriangle* - takes 7 arguments, the first six are coordinates of the points that describe the triangle: X1,Y1, X2,Y2, X3,Y3, the last one is the color 
+- *drawCircle* - takes 4 arguments, the first two are the X,Y coordinates of the center of the triangle, then the radius and lastly, the color
+
+For almost every drawing function(with the exception of *drawPoint* and *drawLine*) there is an equivalent _fill_ function that takes the same arguments. As the name may say, a _fill_ function fills the shape, while the _draw_ functions draws the outline. The fill functions are the following: _fillRect_, _fillTriangle_, _fillCircle_.
+
+Input handling is done in the following way:
+- You call _poolInputEvents_ or _detectInputEvent_. The difference between them is that _poolInputEvents_ returns a list of all the events detected in a frame, while _detectInputEvent_ returns the last event detected in the frame
+- Each input event has four fields: its type, the key that was pressed, and if it was a mouse event, the current coordinates of the mouse pointer. The user can then use this information to handle each event.
+
+The event types are the following:
+- *KEYUP* - detects if the user stopped pressing a key
+- *KEYDOWN* - detects if the user pressed a key
+- *MOUSEUP* - detects if the user stopped pressing a mouse key
+- *MOUSEDOWN* - detects if the user pressed a mouse key
+- *MOUSEWHEEL* - detects if the user moved the mouse wheel
+- *MOUSEMOTION* - detects if the user moved the mouse
+
+Most keyboard and mouse keys are supported and their values are marked with the following aliases:
+- KEY_UNKNOWN
+- KEY_RETURN
+- KEY_ESCAPE
+- KEY_BACKSPACE
+- KEY_TAB
+- KEY_SPACE
+- KEY_EXCLAIM
+- KEY_DBLAPOSTROPHE
+- KEY_HASH
+- KEY_DOLLAR
+- KEY_PERCENT
+- KEY_AMPERSAND
+- KEY_APOSTROPHE
+- KEY_LEFTPAREN
+- KEY_RIGHTPAREN
+- KEY_ASTERISK
+- KEY_PLUS
+- KEY_COMMA
+- KEY_MINUS
+- KEY_PERIOD
+- KEY_SLASH
+- KEY_LEFTBRACE
+- KEY_PIPE
+- KEY_RIGHTBRACE
+- KEY_TILDE
+- KEY_DELETE
+- KEY_PLUSMINUS
+- KEY_CAPSLOCK
+- KEY_UP
+- KEY_DOWN
+- KEY_LEFT
+- KEY_RIGHT
+- KEY_1
+- KEY_2
+- KEY_3
+- KEY_4
+- KEY_5
+- KEY_6
+- KEY_7
+- KEY_8
+- KEY_9
+- KEY_0
+- KEY_A
+- KEY_B
+- KEY_C
+- KEY_D
+- KEY_E
+- KEY_F
+- KEY_G
+- KEY_H
+- KEY_I
+- KEY_J
+- KEY_K
+- KEY_L
+- KEY_M
+- KEY_N
+- KEY_O
+- KEY_P
+- KEY_Q
+- KEY_R
+- KEY_S
+- KEY_T
+- KEY_U
+- KEY_V
+- KEY_W
+- KEY_X
+- KEY_Y
+- KEY_Z
+
+### Setup
+This project requires the following libraries:
+
+- GLM: A header-only C++ mathematics library for graphics software.
+- SDL3: The Simple DirectMedia Layer library for handling graphics, input, and audio.
+- SDL3_ttf: An SDL extension for handling TrueType fonts.
+
+Make sure to install these dependencies before building the project.
+
 # Trello
 
 We used Trello in order to manage and organise our tasks during the development of the application. This is the [link](https://trello.com/b/ZR0p4Yfg/rasterizer) to our backlog creation.
