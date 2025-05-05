@@ -1,6 +1,7 @@
 # --- Build Directories ---
 # Standard CMake build directory
 /build/
+/external/
 
 # --- IDE Configuration ---
 # Visual Studio Code
