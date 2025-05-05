@@ -482,7 +482,7 @@
             normal.y /= l;
             normal.z /= l;
 
-            if(normal.x * (triTranslated.p[0].x - cameraPos.x) + normal.y * (triTranslated.p[0].y - cameraPos.y) + normal.z * (triTranslated.p[0].z - cameraPos.z) < 0.0f){
+            if(normal.x * (triTranslated.p[0].x - cameraPos.x) + normal.y * (triTranslated.p[0].y - cameraPos.y) + normal.z * (triTranslated.p[0].z - cameraPos.z) > 0.0f){
            
                 triProjected.p[0] = proj * triTranslated.p[0];
                 triProjected.p[1] = proj * triTranslated.p[1];
