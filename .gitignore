@@ -13,7 +13,6 @@
 # my_renderer
 
 # Shared Libraries / Dependencies (as requested)
-*.dll
 *.so
 *.dylib
 
