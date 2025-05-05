@@ -20,6 +20,7 @@ class CustomRenderer(IzerRaster.Renderer2D):
         self.translate = 8.0
         self.move_step = 0.5
         self.rotation_step = 0.05
+        self.renderMode = IzerRaster.RenderMode.SHADED_WIREFRAME
 
     def UserUpdate(self):
         events = self.poolInputEvents()
@@ -78,15 +79,6 @@ class CustomRenderer(IzerRaster.Renderer2D):
         # Render our mathematic
         new_mesh = self.applyRenderMatrix(
             transform * rotateX * rotateZ, self.object_loaded)
-
-        # self.drawPoint(250, 200, IzerRaster.RGBA(250, 100, 0, 0))
-        # self.drawLine(100, 100, 100, 400, IzerRaster.RGBA(0, 0, 255, 255))
-        # self.fillRect(540, 540, 660, 660, IzerRaster.RGBA(0, 0, 255, 255))
-        # self.drawTriangle(100, 100, 150, 150, 100, 150, IzerRaster.RGBA(0, 255, 0, 100))
-        # self.drawCircle(600, 600, 60, IzerRaster.RGBA(0, 255, 0, 255))
-        # self.fillCircle(500, 500, 60, IzerRaster.RGBA(0, 255, 0, 255))
-        # self.fillRect(200, 200, 400, 400, IzerRaster.RGBA(0, 120, 180, 255))
-        # self.fillTriangle(400, 400, 300, 300, 400, 200, IzerRaster.RGBA(200, 200, 200, 200))
 
         # Showing our mathematic :)
         self.drawObj(new_mesh)

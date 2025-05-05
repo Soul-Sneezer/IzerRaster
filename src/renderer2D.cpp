@@ -66,6 +66,8 @@
         cameraPos = glm::vec4{0};
         
         isRunning = true;
+
+        this->mode = SHADED_WIREFRAME;
     }
 
     uint64_t Renderer2D::GetCurrentTime()
@@ -524,18 +526,21 @@
 
         // Drawing
         for (const auto& triToRaster : tria) {
-            fillTriangle(
-               static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-               static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-               static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-               RGBA(200,200,200,255)
-           );
-            drawTriangle(
-               static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-               static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-               static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-               RGBA(100,100,100,200)
-           );
+            if (this->mode == SHADED || this->mode == SHADED_WIREFRAME)
+                fillTriangle(
+                   static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
+                   static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
+                   static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
+                   RGBA(200,200,200,255)
+               );
+
+            if (this->mode == WIREFRAME || this->mode == SHADED_WIREFRAME)
+                drawTriangle(
+                   static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
+                   static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
+                   static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
+                   RGBA(100,100,100,200)
+               );
         
        }
     }
