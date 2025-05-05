@@ -112,7 +112,20 @@ This project requires the following libraries:
 - SDL3: The Simple DirectMedia Layer library for handling graphics, input, and audio.
 - SDL3_ttf: An SDL extension for handling TrueType fonts.
 
-Make sure to install these dependencies before building the project.
+Make sure to install these dependencies before building the project:
+ - SDL3 : https://github.com/libsdl-org/SDL/releases/tag/release-3.2.12
+ - GLM : https://github.com/g-truc/glm/releases
+ - SDL3_ttf : https://github.com/libsdl-org/SDL_ttf/releases
+ - Pybind11 : make sure to have python installed after that pip/pipx install pybind11
+
+Windows only:
+- Build Tools for Visual Studio 2022 (.Net and C++ development tools): https://visualstudio.microsoft.com/downloads/?q=build+tools 
+ 
+Optional dependencies: GLEW, NINJA.
+
+### Building and running
+
+After installing the project requirements (look above if not), build the **CMakeLists.txt** from the project and after the build folder successfully creates use: `cmake --build. --Config <BuildType>`. This command will create a .Pyd file that must be copied in `/src`. After this step the application is ready to run. To load your objects add the *path* in the ``loadObj`` function and run `main.py`. Use **W** to zoom out if you are too close to the object and **Esc** to close the window.
 
 # Trello
 

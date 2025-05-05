@@ -7,7 +7,8 @@ class CustomRenderer(IzerRaster.Renderer2D):
         self.object_loaded = False
 
     def UserInit(self):
-        obj_path = "C:/Users/pasca/IzerRaster/obj/suzanne.obj"
+        # object path load
+        obj_path = "C:/Users/pasca/IzerRaster/obj/REPOplayer.obj"
         self.object_loaded = self.loadObj(obj_path)
         print(self.object_loaded)
         self.theta = 0.0
@@ -20,10 +21,12 @@ class CustomRenderer(IzerRaster.Renderer2D):
             if event == None:
                 continue
             elif event.type == "KEYDOWN" and event.key == IzerRaster.KEY_W:
-                self.translate += 1.0
+                # adjust zoom out until the camera is fully implemented
+                self.translate += 10.0
             elif event.type == "KEYDOWN" and event.key == IzerRaster.KEY_ESCAPE:
                 self.Quit()
 
+        # Rotation overtime using glm
         self.theta += self.getDeltaTime()
         transform = IzerRaster.translate(
             IzerRaster.vec3(0.0, 0.0, self.translate))

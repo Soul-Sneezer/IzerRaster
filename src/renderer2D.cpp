@@ -426,6 +426,7 @@
         }
     }
 
+    // Matrix Render for each triangle handle
     mesh Renderer2D::applyRenderMatrix(glm::mat4 mat, mesh objMesh)
     {
         mesh newMesh;
@@ -442,6 +443,8 @@
         return newMesh;
     }
 
+
+    // .obj load from path
     mesh Renderer2D::loadObj(std::string path){
         mesh obj;
         obj.LoadFromObjectFile(path);
@@ -449,10 +452,12 @@
         return obj;
     }
 
+    // .obj drawing
     void Renderer2D::drawObj(mesh obj){
         simpleRender(obj);
     }
 
+    // mesh randering
     void Renderer2D::simpleRender(mesh meshObj){
         std::vector<triangle> tria;
 
@@ -464,7 +469,9 @@
            
         for(auto triTranslated: meshObj.tris){
 
-            glm::vec3 normal, line1, line2;
+
+            // Calculating the normals in order to display the visible triangles
+            glm::vec3 normal, line1, line2; 
             line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
             line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
             line1.z = triTranslated.p[1].z - triTranslated.p[0].z;
@@ -482,6 +489,7 @@
             normal.y /= l;
             normal.z /= l;
 
+            //Display the visible triangles
             if(normal.x * (triTranslated.p[0].x - cameraPos.x) + normal.y * (triTranslated.p[0].y - cameraPos.y) + normal.z * (triTranslated.p[0].z - cameraPos.z) > 0.0f){
            
                 triProjected.p[0] = proj * triTranslated.p[0];
@@ -511,6 +519,7 @@
 
         }
 
+        // Sorting triagles for correct drawing order
         sort(tria.begin(), tria.end(), [](triangle &t1, triangle &t2)
 		{
 			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
@@ -519,6 +528,7 @@
 		});
 
 
+        // Drawing
         for (const auto& triToRaster : tria) {
             fillTriangle(
                static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
@@ -561,6 +571,7 @@
         simpleRender(meshCube);
     }
 
+    //OBJ loading
     bool mesh::LoadFromObjectFile(const std::string& sFilename) {
         std::ifstream f(sFilename);
         if (!f.is_open()) {
@@ -715,6 +726,7 @@
         return true;
     }
 
+    //Input events
     std::optional<InputEvent> Renderer2D::detectInputEvent()
     {
          SDL_Event event;
