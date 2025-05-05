@@ -4,6 +4,10 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_events.h> 
+#include <SDL3/SDL_keycode.h> 
 #include <SDL3_ttf/SDL_ttf.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
@@ -47,6 +51,8 @@ struct InputEvent
     int key;
     int mouseX;
     int mouseY;
+    int wheelY;
+    int wheelX;
 };
 
 class Renderer2D

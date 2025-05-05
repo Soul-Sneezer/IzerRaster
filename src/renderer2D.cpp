@@ -764,6 +764,8 @@
                     break;
                 case SDL_EVENT_MOUSE_WHEEL:
                     input.type = "MOUSEWHEEL";
+                    input.wheelY = event.wheel.y;
+                    input.wheelX = event.wheel.x;
                     input.key = event.button.button;
                     input.mouseX = event.motion.x;
                     input.mouseY = event.motion.y;
@@ -817,6 +819,8 @@
                     break;
                 case SDL_EVENT_MOUSE_WHEEL:
                     input.type = "MOUSEWHEEL";
+                    input.wheelY = event.wheel.y;
+                    input.wheelX = event.wheel.x;
                     input.key = event.button.button;
                     input.mouseX = event.motion.x;
                     input.mouseY = event.motion.y;

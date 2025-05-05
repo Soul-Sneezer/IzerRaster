@@ -22,11 +22,9 @@
 *.lib
 
 # Python Extensions (as requested)
-*.pyd
 
 # Object files
 *.o
-*.obj
 
 # Precompiled Headers
 *.pch

@@ -188,7 +188,9 @@ PYBIND11_MODULE(IzerRaster, m)
         .def_readonly("type", &InputEvent::type)
         .def_readonly("key", &InputEvent::key)
         .def_readonly("mouseX", &InputEvent::mouseX)
-        .def_readonly("mouseY", &InputEvent::mouseY);
+        .def_readonly("mouseY", &InputEvent::mouseY)
+        .def_readonly("wheelY", &InputEvent::wheelY) 
+        .def_readonly("wheelX", &InputEvent::wheelX);
 
     py::class_<mesh>(m, "Mesh")
            .def("LoadFromObjectFile", &mesh::LoadFromObjectFile);
