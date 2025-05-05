@@ -5,10 +5,8 @@ class CustomRenderer(IzerRaster.Renderer2D):
     def __init__(self, appName, width, height):
         super().__init__(appName, width, height)
         self.object_loaded = False
-
-    def UserInit(self):
         # object path load
-        obj_path = "C:/Users/pasca/IzerRaster/obj/suzanne.obj"
+        obj_path = "suzanne.obj"
         self.object_loaded = self.loadObj(obj_path)
         print(self.object_loaded)
 
@@ -96,6 +94,5 @@ class CustomRenderer(IzerRaster.Renderer2D):
 
 renderer2D = CustomRenderer("Testing", 1920, 1080)
 renderer2D.Init()
-# renderer2D.setup_scene()
 renderer2D.Run()
 renderer2D.Quit()
