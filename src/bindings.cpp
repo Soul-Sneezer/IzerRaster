@@ -193,6 +193,11 @@ PYBIND11_MODULE(IzerRaster, m)
     py::class_<mesh>(m, "Mesh")
            .def("LoadFromObjectFile", &mesh::LoadFromObjectFile);
 
+    py::enum_<RenderMode>(m, "RenderMode")
+        .value("WIREFRAME", RenderMode::WIREFRAME)
+        .value("SHADED", RenderMode::SHADED)
+        .value("SHADED_WIREFRAME", RenderMode::SHADED_WIREFRAME);
+
     py::class_<Renderer2D, PyRenderer2D>(m, "Renderer2D")
         .def(py::init<const std::string&, uint16_t, uint16_t>(),
                 py::arg("appName") = "Renderer2D",
@@ -217,5 +222,6 @@ PYBIND11_MODULE(IzerRaster, m)
         .def("getDeltaTime", &Renderer2D::GetDeltaTime)
         .def("applyRenderMatrix", &Renderer2D::applyRenderMatrix)
         .def("poolInputEvents", &Renderer2D::poolInputEvents)
-        .def("detectInputEvent", &Renderer2D::detectInputEvent);
+        .def("detectInputEvent", &Renderer2D::detectInputEvent)
+        .def_readwrite("renderMode", &Renderer2D::mode);
 }

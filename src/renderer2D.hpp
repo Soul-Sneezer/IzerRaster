@@ -49,6 +49,13 @@ struct InputEvent
     int mouseY;
 };
 
+enum RenderMode 
+{
+    WIREFRAME,
+    SHADED,
+    SHADED_WIREFRAME,
+};
+
 class Renderer2D
 {
 private:
@@ -64,7 +71,7 @@ private:
     float theta;
     glm::vec4 cameraPos;
 
-    
+       
     TTF_Font* font; 
     uint32_t frameCount = 0;            // Frames since last FPS update
     uint32_t fps = 0;                   // Current FPS value
@@ -83,6 +90,8 @@ private:
     void fillTopFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
 
 public:
+    RenderMode mode;
+
     Renderer2D(const std::string appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480);
     
     mesh applyRenderMatrix(glm::mat4 mat, mesh objMesh);
