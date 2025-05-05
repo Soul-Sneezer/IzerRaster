@@ -14,11 +14,6 @@ class PyRenderer2D : public Renderer2D
         {
             PYBIND11_OVERRIDE(void, Renderer2D, UserUpdate);
         }
-
-        void UserInit() override 
-        {
-            PYBIND11_OVERRIDE(void, Renderer2D, UserInit);
-        }
 };
 
 PYBIND11_MODULE(IzerRaster, m)

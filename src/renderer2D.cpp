@@ -66,8 +66,6 @@
         cameraPos = glm::vec4{0};
         
         isRunning = true;
-
-        UserInit();
     }
 
     uint64_t Renderer2D::GetCurrentTime()
@@ -121,10 +119,6 @@
         SDL_RenderTexture(renderer, screenTexture, nullptr, nullptr);
 
         SDL_RenderPresent(renderer);
-    }
-
-    void Renderer2D::UserInit()
-    {
     }
 
     void Renderer2D::UserUpdate()

@@ -98,7 +98,6 @@ public:
     void Run();
     void Render();
     virtual void UserUpdate(); // override this to draw
-    virtual void UserInit(); // override this to perform actions during initialization
     void Quit();
     void clearScreen();
     void drawPoint(uint16_t x, uint16_t y, RGBA rgba);
