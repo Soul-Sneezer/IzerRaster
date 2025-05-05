@@ -15,12 +15,13 @@
 # Shared Libraries / Dependencies (as requested)
 *.so
 *.dylib
-
+*.dll
 # Static Libraries
 *.a
 *.lib
 
 # Python Extensions (as requested)
+*.pyd
 
 # Object files
 *.o
