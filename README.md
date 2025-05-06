@@ -1,5 +1,7 @@
 # IzerRaster
 IzerRaster is a rasterizer. What is a rasterizer? A rasterizer takes 3D models and projects them to a 2D surface, that 2D surface being the computer screen.
+https://www.canva.com/design/DAGmfsr3YA4/k_NagS48sFp2AQYWm-HcGw/view?utm_content=DAGmfsr3YA4&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h4b41e2cd2e
+
 
 Currently the library has two main features: 
 - it can load and render 3D models and basic 2D shapes(triangles, rectangles, circles)
