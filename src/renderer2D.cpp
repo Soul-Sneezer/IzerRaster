@@ -6,18 +6,29 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <cuda_runtime.h>
 #include <cmath>
 #include <cstdlib>
 
 uint64_t Renderer2D::lastTime = 0;
 
-Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t height, bool useGPU) : appName(appName), windowWidth(width), windowHeight(height), useGPU(useGPU)
+Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t height) : appName(appName), windowWidth(width), windowHeight(height)
 {
 }
 
 void Renderer2D::Init()
 {
     SDL_SetAppMetadata(appName.c_str(), "1.0", "renderer");
+
+    int deviceCount = 0;
+    cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
+    if (cudaStatus == cudaSuccess && deviceCount > 0) {
+        std::cout << "CUDA device(s) found: " << deviceCount << ". Using GPU mode.\n";
+        this->useGPU = true;
+    } else {
+        std::cout << "No CUDA devices found. Falling back to CPU mode.\n";
+        this->useGPU = false;
+    }
 
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
@@ -41,6 +52,10 @@ void Renderer2D::Init()
         SDL_Quit();
 
         return;
+    }
+
+    if (!SDL_SetRenderVSync(renderer, SDL_RENDERER_VSYNC_DISABLED)) {
+    std::cerr << "SDL_SetRenderVSync failed: " << SDL_GetError() << "\n";
     }
 
     this->screenTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, windowWidth, windowHeight);
@@ -111,20 +126,7 @@ void Renderer2D::Run()
         float deltaTime = GetDeltaTime();
         Renderer2D::lastTime = GetCurrentTime();
 
-        SDL_Event event;
-
-        while (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
-            case SDL_EVENT_QUIT:
-                isRunning = false;
-                break;
-            default:
-                break;
-            }
-        }
-
+        // Render one frame (input handled inside Render/UserUpdate)
         Render();
     }
 }
@@ -201,9 +203,7 @@ void Renderer2D::UserUpdate()
       RZ = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(0,0,1));
     }
 
-    currentTransform = T * RX * RZ;
-
-    drawObj(obj);
+    drawObj(applyRenderMatrix(T * RX * RZ, obj));
 }
 
 void Renderer2D::Quit()
@@ -522,17 +522,14 @@ mesh Renderer2D::applyRenderMatrix(glm::mat4 mat, mesh objMesh)
 {
     mesh newMesh;
 
-    std::cout << useGPU << '\n';
     if (useGPU)
     {
-        std::cout << "SALUT" << '\n';
 
         currentTransform = mat;
         return objMesh;
     }
     for (auto tri : objMesh.tris)
     {
-        std::cout << "aici" << '\n';
         triangle newTri;
         newTri.p[0] = mat * tri.p[0];
         newTri.p[1] = mat * tri.p[1];
@@ -687,7 +684,6 @@ void Renderer2D::gpuRender(const mesh &newObj)
 
     if (newObj.tris.empty())
     {
-        std::cout << "Gol" << '\n';
         // No model loaded; nothing to render
         return;
     }
@@ -828,7 +824,6 @@ void Renderer2D::gpuRender(const mesh &newObj)
     {
         screenBuffer[cy * windowWidth + cx] = RGBA(255, 0, 0, 255);
     }
-    std::cout << "SALUT" << '\n';
 }
 
 // OBJ loading
@@ -1096,6 +1091,10 @@ std::vector<InputEvent> Renderer2D::poolInputEvents()
 
         switch (event.type)
         {
+        case SDL_EVENT_QUIT:
+            isRunning = false;
+            return events;
+
         case SDL_EVENT_KEY_DOWN:
             input.type = "KEYDOWN";
             input.key = event.key.key;

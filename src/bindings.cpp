@@ -14,11 +14,8 @@ class PyRenderer2D : public Renderer2D
         // Always call the Python override if it exists (handles input, transformations, etc.)
         PYBIND11_OVERRIDE(void, Renderer2D, UserUpdate);
         // Then call base class implementation to perform rendering (GPU or CPU drawing)
-        if (useGPU) {
+        
             Renderer2D::UserUpdate();  // run CUDA pipeline for GPU mode
-        } else {
-            Renderer2D::UserUpdate();  // (base does nothing in CPU mode, but safe to call)
-        }
     }
 };
 
@@ -202,13 +199,12 @@ PYBIND11_MODULE(IzerRaster, m)
         .value("SHADED_WIREFRAME", RenderMode::SHADED_WIREFRAME);
 
     py::class_<Renderer2D, PyRenderer2D>(m, "Renderer2D")
-        .def(py::init<const std::string&, uint16_t, uint16_t, bool>(),
+        .def(py::init<const std::string&, uint16_t, uint16_t>(),
              py::arg("appName") = "Renderer2D",
              py::arg("width") = 640,
-             py::arg("height") = 480,
-             py::arg("useGPU") = false)
+             py::arg("height") = 480)
         .def("Init", &Renderer2D::Init)
-        .def("Run", &Renderer2D::Run)
+        .def("Run", &Renderer2D::Run, py::call_guard<py::gil_scoped_release>())
         .def("Quit", &Renderer2D::Quit)
         .def("clearScreen", &Renderer2D::clearScreen)
         .def("drawPoint", py::overload_cast<uint16_t, uint16_t, RGBA>(&Renderer2D::drawPoint),

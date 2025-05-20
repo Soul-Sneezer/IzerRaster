@@ -1,9 +1,8 @@
 import IzerRaster
 
 class CustomRenderer(IzerRaster.Renderer2D):
-    def __init__(self, appName, width, height, gpu=False):
-        super().__init__(appName, width, height, gpu)
-        self.gpu = gpu
+    def __init__(self, appName, width, height):
+        super().__init__(appName, width, height)
         self.object_loaded = False
         obj_path = "/home/alex/IzerRaster/obj/suzanne.obj"
         self.object_loaded = self.loadObj(obj_path)
@@ -22,7 +21,7 @@ class CustomRenderer(IzerRaster.Renderer2D):
 
 # Example usage:
 # Create renderer in GPU mode (use CUDA pipeline)
-renderer = CustomRenderer("Testing", 1920, 1080, gpu=True)
+renderer = CustomRenderer("Testing", 1920, 1080)
 renderer.Init()
 renderer.Run()
 renderer.Quit()

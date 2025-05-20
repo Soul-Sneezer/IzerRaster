@@ -121,7 +121,7 @@ protected:
 public:
     RenderMode mode;
 
-    Renderer2D(const std::string appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480, bool useGPU  = false);
+    Renderer2D(const std::string appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480);
     
     mesh applyRenderMatrix(glm::mat4 mat, mesh objMesh);
     void Init();
