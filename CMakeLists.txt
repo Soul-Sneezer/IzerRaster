@@ -4,14 +4,18 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Project Name (should match the output module base name)
-project(IzerRaster LANGUAGES CXX)
+project(IzerRaster LANGUAGES CXX CUDA)
 
 # Set C++ standard (C++17 as requested)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) # Prefer standard C++
+set(CMAKE_CUDA_ARCHITECTURES 86)
 
 # --- Find Dependencies ---
+
+find_package(CUDAToolkit REQUIRED)  
+
 
 # 1. Find Python (Interpreter and Development Libraries)
 #    REQUIRED ensures CMake stops with an error if not found.
@@ -60,9 +64,14 @@ message(STATUS "Found SDL3_ttf Include Dirs: ${SDL3_TTF_INCLUDE_DIRS}")
 pybind11_add_module(IzerRaster SHARED
     src/renderer2D.cpp
     src/bindings.cpp
+    src/render.cu
 )
 
 # --- Link Dependencies to the Module ---
+
+set_target_properties(IzerRaster PROPERTIES
+    CUDA_ARCHITECTURES "86"
+)
 
 # Link the necessary libraries. pybind11_add_module handles Python itself.
 # We use the modern CMake targets provided by SDL3 and pybind11 if available.
@@ -71,6 +80,7 @@ target_link_libraries(IzerRaster PRIVATE
     pybind11::module # Link pybind11 core module support
     SDL3::SDL3       # Link SDL3 library (target name from SDL3's CMake config)
     SDL3_ttf::SDL3_ttf # Link SDL3_ttf library (target name from SDL3_ttf's CMake config)
+    CUDA::cudart
 )
 
 # Explicitly add include directory for local headers like "renderer2D.hpp"

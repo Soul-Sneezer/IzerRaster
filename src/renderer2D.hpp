@@ -62,6 +62,13 @@ enum RenderMode
     SHADED_WIREFRAME,
 };
 
+ struct Tri
+        {
+            glm::vec2 p[3];
+            float z[3];
+            float depth;
+        };
+
 class Renderer2D
 {
 private:
@@ -87,6 +94,16 @@ private:
     int windowWidth;
     int windowHeight;
 
+    float    translate       = 8.0f;
+    float    pitch_angle     = 0.0f;
+    bool     free_rotate     = false;
+    float    free_theta      = 0.0f;
+    float    rotation_step   = 0.1f;
+
+    Uint64 perfFreq = 0;
+    Uint64 lastPerfCounter = 0;
+
+
     static uint64_t lastTime;
 
     void drawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2, RGBA rgba);
@@ -95,10 +112,16 @@ private:
     void fillBottomFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void fillTopFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
 
+protected:
+    bool useGPU;
+    uint32_t* cudaPixelBuffer = nullptr;
+    float* cudaDepthBuffer = nullptr;
+    glm::mat4 currentTransform;
+
 public:
     RenderMode mode;
 
-    Renderer2D(const std::string appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480);
+    Renderer2D(const std::string appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480, bool useGPU  = false);
     
     mesh applyRenderMatrix(glm::mat4 mat, mesh objMesh);
     void Init();
@@ -118,6 +141,7 @@ public:
     void drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void drawCube();
+    void gpuRender(const mesh& meshObj);
     mesh loadObj(std::string path);
     void drawObj(mesh obj);
     std::vector<InputEvent> poolInputEvents();

@@ -10,10 +10,16 @@ class PyRenderer2D : public Renderer2D
     public:
         using Renderer2D::Renderer2D;
 
-        void UserUpdate() override 
-        {
-            PYBIND11_OVERRIDE(void, Renderer2D, UserUpdate);
+      void UserUpdate() override {
+        // Always call the Python override if it exists (handles input, transformations, etc.)
+        PYBIND11_OVERRIDE(void, Renderer2D, UserUpdate);
+        // Then call base class implementation to perform rendering (GPU or CPU drawing)
+        if (useGPU) {
+            Renderer2D::UserUpdate();  // run CUDA pipeline for GPU mode
+        } else {
+            Renderer2D::UserUpdate();  // (base does nothing in CPU mode, but safe to call)
         }
+    }
 };
 
 PYBIND11_MODULE(IzerRaster, m)
@@ -196,16 +202,18 @@ PYBIND11_MODULE(IzerRaster, m)
         .value("SHADED_WIREFRAME", RenderMode::SHADED_WIREFRAME);
 
     py::class_<Renderer2D, PyRenderer2D>(m, "Renderer2D")
-        .def(py::init<const std::string&, uint16_t, uint16_t>(),
-                py::arg("appName") = "Renderer2D",
-                py::arg("width") = 640,
-                py::arg("height") = 480)
+        .def(py::init<const std::string&, uint16_t, uint16_t, bool>(),
+             py::arg("appName") = "Renderer2D",
+             py::arg("width") = 640,
+             py::arg("height") = 480,
+             py::arg("useGPU") = false)
         .def("Init", &Renderer2D::Init)
         .def("Run", &Renderer2D::Run)
         .def("Quit", &Renderer2D::Quit)
         .def("clearScreen", &Renderer2D::clearScreen)
-        .def("drawPoint", py::overload_cast<uint16_t, uint16_t, RGBA>(&Renderer2D::drawPoint), py::arg("x"), py::arg("y"), py::arg("rgba_struct"))
-        .def("drawLine", &Renderer2D::drawLine, py::arg("x1"), py::arg("y1"), py::arg("x2"), py::arg("y2"), py::arg("rgba"))
+        .def("drawPoint", py::overload_cast<uint16_t, uint16_t, RGBA>(&Renderer2D::drawPoint),
+             py::arg("x"), py::arg("y"), py::arg("rgba_struct"))
+        .def("drawLine", &Renderer2D::drawLine)
         .def("drawRect", &Renderer2D::drawRect)
         .def("fillRect", &Renderer2D::fillRect)
         .def("drawCircle", &Renderer2D::drawCircle)
@@ -213,7 +221,7 @@ PYBIND11_MODULE(IzerRaster, m)
         .def("drawTriangle", &Renderer2D::drawTriangle)
         .def("fillTriangle", &Renderer2D::fillTriangle)
         .def("drawCube", &Renderer2D::drawCube)
-        .def("loadObj", &Renderer2D::loadObj,py::arg("filename"))
+        .def("loadObj", &Renderer2D::loadObj, py::arg("filename"))
         .def("drawObj", &Renderer2D::drawObj)
         .def("getCurrentTime", &Renderer2D::GetCurrentTime)
         .def("getDeltaTime", &Renderer2D::GetDeltaTime)
