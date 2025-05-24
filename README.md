@@ -7,6 +7,30 @@ Currently the library has two main features:
 - it can load and render 3D models and basic 2D shapes(triangles, rectangles, circles)
 - it can handle input events from the mouse or keyboard
 
+## Setup
+This project requires the following libraries:
+
+- GLM: A header-only C++ mathematics library for graphics software.
+- SDL3: The Simple DirectMedia Layer library for handling graphics, input, and audio.
+- SDL3_ttf: An SDL extension for handling TrueType fonts.
+
+Make sure to install these dependencies before building the project:
+ - SDL3 : https://github.com/libsdl-org/SDL/releases/tag/release-3.2.12
+ - GLM : https://github.com/g-truc/glm/releases
+ - SDL3_ttf : https://github.com/libsdl-org/SDL_ttf/releases
+ - Pybind11 : make sure to have python installed after that pip/pipx install pybind11
+
+Windows only:
+- Build Tools for Visual Studio 2022 (.Net and C++ development tools): https://visualstudio.microsoft.com/downloads/?q=build+tools 
+ 
+Optional dependencies: GLEW, NINJA.
+
+## Building and running
+
+After installing the project requirements (look above if not), build the **CMakeLists.txt** from the project and after the build folder successfully creates use: `cmake --build. --Config <BuildType>`. This command will create a .Pyd file that must be copied in `/src`. After this step the application is ready to run. To load your objects add the *path* in the ``loadObj`` function and run `main.py`. Use **W** to zoom out if you are too close to the object and **Esc** to close the window.
+
+## Documentation
+
 The IzerRaster library has a core loop, named UserUpdate(), that runs once per frame. And a UserInit() function, which runs right after the basic Init() function that initializes everything. The user should override the "UserUpdate", "UserInit" function when defining the renderer class.
 
 The drawing/rendering and input handling functions should be called from UserUpdate.
@@ -106,28 +130,6 @@ Most keyboard and mouse keys are supported and their values are marked with the 
 - KEY_X
 - KEY_Y
 - KEY_Z
-
-### Setup
-This project requires the following libraries:
-
-- GLM: A header-only C++ mathematics library for graphics software.
-- SDL3: The Simple DirectMedia Layer library for handling graphics, input, and audio.
-- SDL3_ttf: An SDL extension for handling TrueType fonts.
-
-Make sure to install these dependencies before building the project:
- - SDL3 : https://github.com/libsdl-org/SDL/releases/tag/release-3.2.12
- - GLM : https://github.com/g-truc/glm/releases
- - SDL3_ttf : https://github.com/libsdl-org/SDL_ttf/releases
- - Pybind11 : make sure to have python installed after that pip/pipx install pybind11
-
-Windows only:
-- Build Tools for Visual Studio 2022 (.Net and C++ development tools): https://visualstudio.microsoft.com/downloads/?q=build+tools 
- 
-Optional dependencies: GLEW, NINJA.
-
-### Building and running
-
-After installing the project requirements (look above if not), build the **CMakeLists.txt** from the project and after the build folder successfully creates use: `cmake --build. --Config <BuildType>`. This command will create a .Pyd file that must be copied in `/src`. After this step the application is ready to run. To load your objects add the *path* in the ``loadObj`` function and run `main.py`. Use **W** to zoom out if you are too close to the object and **Esc** to close the window.
 
 # Trello
 
