@@ -20,6 +20,8 @@
 #include <stdexcept> 
 #include <iostream> 
 #include <optional>
+#include "texture.hpp"
+
 
 struct RGBA 
 {
@@ -33,14 +35,18 @@ struct RGBA
     RGBA() : r(0), g(0), b(0), a(255) {}
 };
 
-struct triangle
-{
-    glm::vec4 p[3];
+struct triangle {
+    glm::vec4 p[3];   // poziţii
+    glm::vec2 t[3];   // **NEW** coordonate UV
 };
+
+
+
 
 struct mesh 
 {
     std::vector<triangle> tris;
+    Texture*  texture = nullptr;
 
     bool LoadFromObjectFile(const std::string& sFilename);
 };
@@ -55,11 +61,18 @@ struct InputEvent
     int wheelX;
 };
 
-enum RenderMode 
-{
-    WIREFRAME,
-    SHADED,
-    SHADED_WIREFRAME,
+enum class RenderMode {
+    WIREFRAME,              // doar muchii
+    SHADED,                 // culori plane
+    SHADED_WIREFRAME,       // culori + sârmă
+    TEXTURED,               // textură (fără sârmă)
+    TEXTURED_WIREFRAME      // textură + sârmă
+};
+struct Tri {
+    glm::vec2 p[3];   // screen-space xy
+    float     z[3];   // adâncimi
+    glm::vec2 t[3];   //  ← ADĂUGĂ UV-urile!
+    float     depth;
 };
 
 class Renderer2D
@@ -69,6 +82,8 @@ private:
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* screenTexture = nullptr;
     std::vector<RGBA> screenBuffer;
+    Texture* currentTex = nullptr;   // pointer la textura activă
+    mesh*        currentMesh = nullptr;  
 
     //stuff for projections
     mesh meshCube;
@@ -87,13 +102,33 @@ private:
     int windowWidth;
     int windowHeight;
 
+std::vector<float> depthBufferCPU;   //  ← NOU!
+              // deja există
+
+    float    translate       = 8.0f;
+    float    pitch_angle     = 0.0f;
+    bool     free_rotate     = false;
+    float    free_theta      = 0.0f;
+    float    rotation_step   = 0.1f;
+
+    Uint64 perfFreq = 0;
+    Uint64 lastPerfCounter = 0;
+
+
     static uint64_t lastTime;
+
 
     void drawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2, RGBA rgba);
     void update(float deltaTime);
     void simpleRender(mesh meshObj);
     void fillBottomFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void fillTopFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
+
+protected:
+    bool useGPU;
+    uint32_t* cudaPixelBuffer = nullptr;
+    float* cudaDepthBuffer = nullptr;
+     glm::mat4 currentTransform {1.0f};
 
 public:
     RenderMode mode;
@@ -118,8 +153,12 @@ public:
     void drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void drawCube();
+    void gpuRender(const mesh& meshObj);
     mesh loadObj(std::string path);
     void drawObj(mesh obj);
     std::vector<InputEvent> poolInputEvents();
     std::optional<InputEvent> detectInputEvent();
+    Texture* loadTexture(const std::string& path);
+    void     setTexture(Texture* t);
+    void fillTexturedTri(const triangle& tri, const Texture* tex);
 };
