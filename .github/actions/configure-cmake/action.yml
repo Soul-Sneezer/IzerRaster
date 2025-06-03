@@ -8,24 +8,40 @@ inputs:
   custom_flags:
     description: 'Custom CMake configuration flags'
     required: false
-    - DSDL3_DIR=${GITHUB_WORKSPACE}/sdl3-install/lib/cmake/SDL3
-    
+
 runs:
   using: "composite"
   steps:
-    # Uncomment when using external dependencies, so they will be cached
+    # Cache SDL3 install directory
+    - name: Cache SDL3 install
+      uses: actions/cache@v4
+      id: cache-sdl3
+      with:
+        path: sdl3-install
+        key: ${{ runner.os }}-sdl3-${{ hashFiles('**/CMakeLists.txt') }}
+
+    # Install SDL3 if not cached
+    - name: Install SDL3 (if not cached)
+      shell: bash
+      if: steps.cache-sdl3.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/libsdl-org/SDL.git -b main SDL3
+        cd SDL3
+        mkdir build && cd build
+        cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install
+        make -j$(nproc)
+        make install
+
+    # Cache CMake dependencies
     - name: Cache deps
       uses: actions/cache@v4
       id: cache-deps
-      # make the key depend on the dependency version
       with:
         path: |
           ${{ env.BUILD_DIR }}/_deps
         key: cache-${{ matrix.cmake_generator }}-${{ matrix.os }}-${{ matrix.cxx }}-${{ env.BUILD_TYPE }}-${{ env.SFML_VERSION }}
 
-    # NOTE: GH Actions does not allow updating the cache yet
-    # Using the workaround found here: https://github.com/actions/cache/issues/171
-    # Since this cache is small, it should not fill the cache too much
+    # Cache Ninja dependencies
     - name: Cache Ninja deps
       uses: actions/cache@v4
       if: matrix.cmake_generator == 'Ninja'
@@ -37,6 +53,7 @@ runs:
         key: ${{ matrix.os }}-${{ matrix.cxx }}-ninja-cache-${{ hashFiles('CMakeLists.txt') }}
         restore-keys: ${{ matrix.os }}-${{ matrix.cxx }}-ninja-cache-
 
+    # Cache MinGW toolchain
     - name: Cache MinGW
       uses: actions/cache@v4
       id: cache-mingw
@@ -45,6 +62,7 @@ runs:
         path: gcc
         key: ${{ runner.os }}-${{ env.MINGW_CACHE_KEY }}
 
+    # Download MinGW toolchain (if not cached)
     - name: Download toolchain (MinGW)
       uses: suisei-cn/actions-download-file@v1.4.0
       id: download-mingw-gcc
@@ -53,18 +71,19 @@ runs:
         url: "https://github.com/brechtsanders/winlibs_mingw/releases/download/${{ env.MINGW_VER }}"
         target: compiler/
 
+    # Install MinGW toolchain
     - name: Install toolchain (MinGW)
       shell: bash
       if: runner.os == 'Windows' && matrix.cxx == 'g++' && steps.cache-mingw.outputs.cache-hit != 'true'
       run: |
         7z x compiler/${{ steps.download-mingw-gcc.outputs.filename }} -ogcc
 
+    # Configure CMake for MinGW
     - name: Configure CMake (MinGW)
       shell: bash
       if: runner.os == 'Windows' && matrix.cxx == 'g++'
       run: |
         PATH="$(pwd)/gcc/mingw64/bin:${PATH}"
-        # because GH Actions does not properly prepend to $PATH and still chooses older gcc
         CMAKE_GENERATOR=${{ matrix.cmake_generator }} cmake -S ${GITHUB_WORKSPACE} -B ${{ env.BUILD_DIR }} \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/artifacts \
@@ -72,6 +91,7 @@ runs:
           -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
           ${{ inputs.custom_flags }}
 
+    # Configure CMake for other platforms
     - name: Configure CMake
       shell: bash
       if: ${{ !(runner.os == 'Windows' && matrix.cxx == 'g++') }}
@@ -82,23 +102,3 @@ runs:
           -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
           -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
           ${{ inputs.custom_flags }}
-
-    - name: Configure CMake (SDL3)
-      shell: bash
-      run: |
-        git clone https://github.com/libsdl-org/SDL.git -b main SDL3
-        cd SDL3
-        mkdir build && cd build
-        cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install
-        make -j$(nproc)
-        make install
-
-    - name: Cache SDL3 install
-      uses: actions/cache@v4
-      with:
-        path: sdl3-install
-        key: ${{ runner.os }}-sdl3-${{ hashFiles('**/CMakeLists.txt') }}
-
-
-# https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
-# https://github.com/GuillaumeFalourd/poc-github-actions/blob/main/.github/workflows/36-local-action.yml
