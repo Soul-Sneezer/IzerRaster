@@ -8,11 +8,8 @@ inputs:
   custom_flags:
     description: 'Custom CMake configuration flags'
     required: false
-
-  custom_flags: >
-    -DSDL3_DIR=${GITHUB_WORKSPACE}/sdl3-install/lib/cmake/SDL3
+    - DSDL3_DIR=${GITHUB_WORKSPACE}/sdl3-install/lib/cmake/SDL3
     
-
 runs:
   using: "composite"
   steps:
@@ -86,7 +83,7 @@ runs:
           -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
           ${{ inputs.custom_flags }}
 
-          - name: Install SDL3 from source
+    - name: Configure CMake (SDL3)
       shell: bash
       run: |
         git clone https://github.com/libsdl-org/SDL.git -b main SDL3
