@@ -149,24 +149,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - os: ubuntu-22.04
-          #   c: clang-17
-          #   cxx: clang++-17
-          #   clang_ver: "17"
-          #   clang_ver_full: "17.0.6"
-          #   name: "MSan: Ubuntu 22.04 Clang 17"
-          #   cmake_flags: "-DUSE_MSAN=ON -DBUILD_SHARED_LIBS=FALSE"
-          #   cmake_generator: Ninja
-          #   # This env runs memory sanitizers
-          #   runs_msan: true
-
           - os: ubuntu-22.04
             c: gcc-12
             cxx: g++-12
             name: "ASan: Ubuntu 22.04 GCC 12"
             cmake_flags: "-DUSE_ASAN=ON -DBUILD_SHARED_LIBS=FALSE"
-            cmake_generator: Ninja
-            # This env runs address sanitizers
+            cmake_generator: "Unix Makefiles"  # Changed from Ninja
             runs_asan: true
 
           - os: ubuntu-22.04
@@ -174,8 +162,7 @@ jobs:
             cxx: g++-11
             name: "Valgrind: Ubuntu 22.04 GCC 11"
             cmake_flags: -DBUILD_SHARED_LIBS=FALSE
-            cmake_generator: Ninja
-            # This env runs valgrind
+            cmake_generator: "Unix Makefiles"  # Changed from Ninja
             runs_valgrind: true
 
           - os: macos-12
@@ -183,25 +170,14 @@ jobs:
             cxx: clang++
             name: "ASan: macOS 12 Apple Clang 14"
             cmake_flags: "-DUSE_ASAN=ON -DSFML_BUILD_FRAMEWORKS=FALSE -DSFML_DEPENDENCIES_INSTALL_PREFIX=$GITHUB_WORKSPACE/artifacts -DBUILD_SHARED_LIBS=FALSE"
-            # cmake_generator:
-            # This env runs address sanitizers
-            # runs_asan: true
-
-          # - os: macos-12
-          #   c: gcc-12
-          #   cxx: g++-12
-          #   name: "macOS 12 GCC 12"
-          #   cmake_flags:
-          #   cmake_generator: Ninja
+            cmake_generator: "Unix Makefiles"
 
           - os: windows-2022
             c: cl
             cxx: cl
             name: "ASan: Windows 2022 MSVC 19.38"
             cmake_flags: "-DUSE_ASAN=ON -DBUILD_SHARED_LIBS=TRUE"
-            # cmake_generator: Ninja
-            # This env runs address sanitizers
-            # runs_asan: true
+            cmake_generator: "Visual Studio 17 2022"
 
           - os: windows-2022
             c: gcc

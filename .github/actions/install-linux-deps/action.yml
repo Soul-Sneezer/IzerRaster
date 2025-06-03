@@ -6,6 +6,10 @@ runs:
     - run: |
         sudo apt-get update
         sudo apt-get install --no-install-recommends \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
           libxrandr-dev \
           libxcursor-dev \
           libudev-dev \
@@ -17,5 +21,11 @@ runs:
           libdrm-dev \
           libgbm-dev \
           libfreetype6-dev \
-          xorg
+          xorg \
+          wayland-protocols \
+          libwayland-dev \
+          libdbus-1-dev \
+          libpulse-dev \
+          libasound2-dev \
+          libxkbcommon-dev
       shell: bash

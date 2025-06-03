@@ -28,9 +28,16 @@ runs:
         git clone https://github.com/libsdl-org/SDL.git -b main SDL3
         cd SDL3
         mkdir build && cd build
-        cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install
-        make -j$(nproc)
-        make install
+        # Use the appropriate generator based on the matrix
+        if [[ "${{ matrix.cmake_generator }}" == "Ninja" ]]; then
+          cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install
+          ninja
+          ninja install
+        else
+          cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install
+          cmake --build . -j$(nproc)
+          cmake --install .
+        fi
 
     # Cache CMake dependencies
     - name: Cache deps
