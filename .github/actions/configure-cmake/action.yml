@@ -9,6 +9,10 @@ inputs:
     description: 'Custom CMake configuration flags'
     required: false
 
+  custom_flags: >
+    -DSDL3_DIR=${GITHUB_WORKSPACE}/sdl3-install/lib/cmake/SDL3
+    
+
 runs:
   using: "composite"
   steps:
@@ -81,6 +85,22 @@ runs:
           -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
           -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
           ${{ inputs.custom_flags }}
+
+          - name: Install SDL3 from source
+      shell: bash
+      run: |
+        git clone https://github.com/libsdl-org/SDL.git -b main SDL3
+        cd SDL3
+        mkdir build && cd build
+        cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install
+        make -j$(nproc)
+        make install
+
+    - name: Cache SDL3 install
+      uses: actions/cache@v4
+      with:
+        path: sdl3-install
+        key: ${{ runner.os }}-sdl3-${{ hashFiles('**/CMakeLists.txt') }}
 
 
 # https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
