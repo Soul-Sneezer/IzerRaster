@@ -96,6 +96,7 @@ runs:
       shell: bash
       if: ${{ !(runner.os == 'Windows' && matrix.cxx == 'g++') }}
       run: |
+        CMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/sdl3-install \
         CMAKE_GENERATOR=${{ matrix.cmake_generator }} cmake -S ${GITHUB_WORKSPACE} -B ${{ env.BUILD_DIR }} \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/artifacts \
