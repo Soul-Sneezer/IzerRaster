@@ -290,6 +290,8 @@ jobs:
         run: cmake --build "${BUILD_DIR}" --config ${BUILD_TYPE} -j6
 
       - name: Install
+        env:
+          CI: true
         run: |
           mkdir -p artifacts/${BIN_DIR}
           cmake --install "${BUILD_DIR}" --config ${BUILD_TYPE} --prefix artifacts
