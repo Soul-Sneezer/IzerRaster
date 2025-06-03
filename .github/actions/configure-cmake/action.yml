@@ -78,6 +78,33 @@ runs:
       run: |
         7z x compiler/${{ steps.download-mingw-gcc.outputs.filename }} -ogcc
 
+    # Install GLM on Linux
+    - name: Install GLM (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libglm-dev
+
+    # Install GLM on macOS
+    - name: Install GLM (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew update
+        brew install glm
+
+    # Install vcpkg and GLM on Windows
+    - name: Install GLM (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git vcpkg
+        ./vcpkg/bootstrap-vcpkg.bat
+        ./vcpkg/vcpkg install glm
+      env:
+        VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
     # Configure CMake for MinGW
     - name: Configure CMake (MinGW)
       shell: bash
@@ -89,6 +116,7 @@ runs:
           -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/artifacts \
           -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
           -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
+          -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg/installed/x64-windows/share" \
           ${{ inputs.custom_flags }}
 
     # Configure CMake for other platforms
@@ -96,8 +124,8 @@ runs:
       shell: bash
       if: ${{ !(runner.os == 'Windows' && matrix.cxx == 'g++') }}
       run: |
-        CMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/sdl3-install \
-        CMAKE_GENERATOR=${{ matrix.cmake_generator }} cmake -S ${GITHUB_WORKSPACE} -B ${{ env.BUILD_DIR }} \
+        CMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/sdl3-install" \
+        cmake -S ${GITHUB_WORKSPACE} -B ${{ env.BUILD_DIR }} \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/artifacts \
           -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
