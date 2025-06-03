@@ -47,11 +47,11 @@ message(STATUS "Using pybind11 (FetchContent): ${pybind11_INCLUDE_DIRS}")
 #    to point to the SDL installation directories (e.g., the root dir containing include/, lib/).
 #    Example: cmake .. -DCMAKE_PREFIX_PATH="/path/to/sdl3_install;/path/to/sdl3_ttf_install"
 find_package(SDL3 REQUIRED)
-find_package(SDL3_ttf REQUIRED)
+#find_package(SDL3_ttf REQUIRED)
 message(STATUS "Found SDL3 Library: ${SDL3_LIBRARIES} (Using Target: SDL3::SDL3)")
 message(STATUS "Found SDL3 Include Dirs: ${SDL3_INCLUDE_DIRS}")
-message(STATUS "Found SDL3_ttf Library: ${SDL3_TTF_LIBRARIES} (Using Target: SDL3_ttf::SDL3_ttf)")
-message(STATUS "Found SDL3_ttf Include Dirs: ${SDL3_TTF_INCLUDE_DIRS}")
+#message(STATUS "Found SDL3_ttf Library: ${SDL3_TTF_LIBRARIES} (Using Target: SDL3_ttf::SDL3_ttf)")
+#message(STATUS "Found SDL3_ttf Include Dirs: ${SDL3_TTF_INCLUDE_DIRS}")
 # --- Define the Python Module Target ---
 
 # Use pybind11's helper function to create the Python extension module.
@@ -70,7 +70,7 @@ pybind11_add_module(IzerRaster SHARED
 target_link_libraries(IzerRaster PRIVATE
     pybind11::module # Link pybind11 core module support
     SDL3::SDL3       # Link SDL3 library (target name from SDL3's CMake config)
-    SDL3_ttf::SDL3_ttf # Link SDL3_ttf library (target name from SDL3_ttf's CMake config)
+    #    SDL3_ttf::SDL3_ttf # Link SDL3_ttf library (target name from SDL3_ttf's CMake config)
 )
 
 # Explicitly add include directory for local headers like "renderer2D.hpp"
