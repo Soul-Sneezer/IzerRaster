@@ -37,8 +37,8 @@ runs:
           -DSDL_XINPUT=OFF `
           -DSDL_JOYSTICK=OFF `
           -DSDL_GAMECONTROLLER=OFF `
-          -DSDL_HAPTIC=ON `
-          -DSDL_HIDAPI=OFF `
+          -DSDL_HAPTIC=OFF `
+          -DSDL_HIDAPI=ON `
           -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE/sdl3-install" 
         cmake --build build --config Release --parallel 4
         cmake --install build
