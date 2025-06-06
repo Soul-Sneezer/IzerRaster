@@ -1,14 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-config-debug/build_config")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-config-release/build_config")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-config-relwithdebinfo/build_config")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-config-minsizerel/build_config")
-
-file(WRITE "${CMAKE_BINARY_DIR}/include-config-debug/build_config/SDL3BuildConfig.h" "#define SDL_DISABLE_WINDOWS_GAMING_INPUT 1\n")
-file(WRITE "${CMAKE_BINARY_DIR}/include-config-release/build_config/SDL3BuildConfig.h" "#define SDL_DISABLE_WINDOWS_GAMING_INPUT 1\n")
-file(WRITE "${CMAKE_BINARY_DIR}/include-config-relwithdebinfo/build_config/SDL3BuildConfig.h" "#define SDL_DISABLE_WINDOWS_GAMING_INPUT 1\n")
-file(WRITE "${CMAKE_BINARY_DIR}/include-config-minsizerel/build_config/SDL3BuildConfig.h" "#define SDL_DISABLE_WINDOWS_GAMING_INPUT 1\n")
+set(SDL_WINDOWS_GAMING_INPUT OFF CACHE BOOL "Disable Windows Gaming Input" FORCE)
 
 project(IzerRaster LANGUAGES CXX)
 
