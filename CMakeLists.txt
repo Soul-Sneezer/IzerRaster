@@ -84,15 +84,28 @@ target_include_directories(IzerRaster PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR} # Directory containing this CMakeLists.txt
 )
 
+# First try find_package
+find_package(GLM QUIET)
 
-find_path(GLM_INCLUDE_DIR glm/glm.hpp
-    PATHS ${CMAKE_PREFIX_PATH}/include
-)
-if(NOT GLM_INCLUDE_DIR)
-    message(FATAL_ERROR "GLM not found!")
+# If find_package fails, try find_path as fallback
+if(NOT GLM_FOUND)
+    find_path(GLM_INCLUDE_DIR glm/glm.hpp
+        PATHS ${CMAKE_PREFIX_PATH}/include
+    )
+    if(NOT GLM_INCLUDE_DIR)
+        message(FATAL_ERROR "GLM not found! Neither find_package nor find_path could locate GLM.")
+    endif()
+    
+    # Create GLM::GLM target if it doesn't exist
+    if(NOT TARGET GLM::GLM)
+        add_library(GLM::GLM INTERFACE IMPORTED)
+        set_target_properties(GLM::GLM PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${GLM_INCLUDE_DIR}"
+        )
+    endif()
 endif()
 
-target_include_directories(IzerRaster PRIVATE ${GLM_INCLUDE_DIR})
+target_link_libraries(IzerRaster PRIVATE GLM::GLM)
 
 # --- Configure Build Options ---
 
