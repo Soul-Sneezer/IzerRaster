@@ -27,13 +27,17 @@ runs:
       if: runner.os == 'Windows'
       shell: powershell
       run: |
-        # Use Join-Path for proper path handling
         $vcpkg = Join-Path $env:VCPKG_ROOT "vcpkg.exe"
         & $vcpkg install glm:x64-windows
         
-        # Debug: Check where GLM was installed
-        $glmPath = Join-Path $env:VCPKG_ROOT "installed\x64-windows\include\glm"
-        ls $glmPath
+        # Debug: Show GLM installation paths
+        $glmPath = Join-Path $env:VCPKG_ROOT "installed\x64-windows"
+        Write-Host "GLM installation path: $glmPath"
+        ls $glmPath\include\glm
+        
+        # Export GLM paths for CMake
+        echo "GLM_DIR=$glmPath" >> $env:GITHUB_ENV
+        echo "GLM_ROOT_DIR=$glmPath" >> $env:GITHUB_ENV
 
     # Cache SDL3 install directory
     - name: Cache SDL3 install
