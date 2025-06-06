@@ -30,11 +30,11 @@ runs:
         cd SDL3
         mkdir build && cd build
         if [[ "${{ matrix.cmake_generator }}" == "Ninja" ]]; then
-          cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install
+          cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON
           ninja
           ninja install
         else
-          cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install
+          cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON
           cmake --build . -j$(nproc)
           cmake --install .
         fi
@@ -122,6 +122,7 @@ runs:
           -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
           -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
           -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg/installed/x64-windows/share" \
+          -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON \
           ${{ inputs.custom_flags }}
 
     - name: Configure CMake
@@ -134,4 +135,5 @@ runs:
           -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/artifacts \
           -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
           -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
+          -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON \
           ${{ inputs.custom_flags }}
