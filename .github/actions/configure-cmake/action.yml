@@ -27,8 +27,6 @@ runs:
       run: |
         git clone https://github.com/libsdl-org/SDL.git -b main SDL3
         cd SDL3
-        
-       # Configure SDL with all the gaming input related features explicitly disabled
         cmake -B build `
           -DCMAKE_BUILD_TYPE=Release `
           -DSDL_TEST=OFF `
@@ -36,16 +34,14 @@ runs:
           -DSDL_WINDOWS_GAMING_INPUT=OFF `
           -DSDL_WINDOWS=ON `
           -DSDL_DIRECTX=ON `
-          -DSDL_XINPUT=ON `
+          -DSDL_XINPUT=OFF `
           -DSDL_JOYSTICK=OFF `
           -DSDL_GAMECONTROLLER=OFF `
           -DSDL_HAPTIC=ON `
           -DSDL_HIDAPI=OFF `
-          -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE/sdl3-install"
-
-        # Build and install
+          -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE/sdl3-install" 
         cmake --build build --config Release --parallel 4
-        cmake --install build --prefix "$env:GITHUB_WORKSPACE/sdl3-install"
+        cmake --install build
 
     # Install SDL3 if not cached
     - name: Install SDL3 (Linux)
