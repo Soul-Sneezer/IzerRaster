@@ -28,41 +28,6 @@ runs:
         git clone https://github.com/libsdl-org/SDL.git -b main SDL3
         cd SDL3
 
-         # Create a modified SDL_gameinput.h that doesn't depend on gameinput.h
-        @'
-        #ifndef SDL_gameinput_h_
-        #define SDL_gameinput_h_
-        
-        #include "SDL_internal.h"
-        
-        // Stub functions
-        #ifdef __cplusplus
-        extern "C" {
-        #endif
-        
-        extern bool SDL_InitGameInput(void **ppGameInput);
-        extern void SDL_QuitGameInput(void);
-        
-        #ifdef __cplusplus
-        }
-        #endif
-        
-        #endif // SDL_gameinput_h_
-        '@ | Set-Content src/core/windows/SDL_gameinput.h
-        
-        # Create a stub implementation
-        @'
-        #include "SDL_internal.h"
-        #include "SDL_gameinput.h"
-        
-        bool SDL_InitGameInput(void **ppGameInput) {
-            return false; // Initialization failed, will fall back to other input methods
-        }
-        
-        void SDL_QuitGameInput(void) {
-        }
-        '@ | Set-Content src/core/windows/SDL_gameinput.cpp
-
         cmake -B build `
           -DCMAKE_BUILD_TYPE=Release `
           -DSDL_TEST=OFF `
@@ -75,6 +40,7 @@ runs:
           -DSDL_GAMECONTROLLER=OFF `
           -DSDL_HAPTIC=OFF `
           -DSDL_HIDAPI=ON `
+          -DHAVE_GAMEINPUT_H=0 `
           -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE/sdl3-install" 
         cmake --build build --config Release --parallel 4
         cmake --install build
