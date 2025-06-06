@@ -88,12 +88,24 @@ target_include_directories(IzerRaster PRIVATE
 find_package(GLM QUIET)
 
 # If find_package fails, try find_path as fallback
-if(NOT TARGET GLM::GLM)  # Changed condition to check if target exists
+if(NOT TARGET GLM::GLM)
     find_path(GLM_INCLUDE_DIR glm/glm.hpp
-        PATHS ${CMAKE_PREFIX_PATH}/include
+        PATHS 
+            ${CMAKE_PREFIX_PATH}/include
+            ${GLM_DIR}/include
+            ${GLM_ROOT_DIR}/include
+            $ENV{GLM_DIR}/include
+            $ENV{GLM_ROOT_DIR}/include
+            $ENV{VCPKG_ROOT}/installed/x64-windows/include
     )
     if(NOT GLM_INCLUDE_DIR)
-        message(FATAL_ERROR "GLM not found! Neither find_package nor find_path could locate GLM.")
+        message(FATAL_ERROR "GLM not found! Neither find_package nor find_path could locate GLM. Searched in: \n"
+            "  ${CMAKE_PREFIX_PATH}/include\n"
+            "  ${GLM_DIR}/include\n"
+            "  ${GLM_ROOT_DIR}/include\n"
+            "  $ENV{GLM_DIR}/include\n"
+            "  $ENV{GLM_ROOT_DIR}/include\n"
+            "  $ENV{VCPKG_ROOT}/installed/x64-windows/include")
     endif()
 
     # Create GLM::GLM target
