@@ -241,24 +241,23 @@ jobs:
         run: |
           choco install ninja
 
-      - name: Install Gaming SDK (Windows)
+      - name: Install SDL3 (Windows)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          # Download Windows SDK installer
-          $url = "https://go.microsoft.com/fwlink/?linkid=2173743"  # Windows 10 SDK installer
-          $output = "$env:TEMP\winsdksetup.exe"
-          Invoke-WebRequest -Uri $url -OutFile $output
+          # Clone SDL
+          git clone https://github.com/libsdl-org/SDL.git
+          cd SDL
           
-          # Install Windows SDK (silent install, only Gaming components)
-          Start-Process -FilePath $output -ArgumentList "/features OptionId.GamingFeature /quiet /norestart" -Wait
+          # Configure SDL without gaming input
+          cmake -B build -DSDL_WINDOWS_GAMING_INPUT=OFF -DCMAKE_BUILD_TYPE=Release -DSDL_TEST=OFF -DBUILD_SHARED_LIBS=ON
           
-          # The Gaming SDK will be installed to the default location:
-          # C:\Program Files (x86)\Windows Kits\10\Include\10.0.20348.0
-          echo "WINDOWS_GAMING_SDK=C:\Program Files (x86)\Windows Kits\10" >> $env:GITHUB_ENV
+          # Build and install
+          cmake --build build --config Release --parallel 4
+          cmake --install build --prefix "$env:GITHUB_WORKSPACE/SDL_install"
           
-          # Add the SDK path to CMAKE_PREFIX_PATH
-          echo "CMAKE_PREFIX_PATH=C:\Program Files (x86)\Windows Kits\10\Include\10.0.20348.0" >> $env:GITHUB_ENV
+          # Add to CMAKE_PREFIX_PATH
+          echo "CMAKE_PREFIX_PATH=$env:GITHUB_WORKSPACE/SDL_install" >> $env:GITHUB_ENV
 
       - name: Install valgrind
         if: runner.os == 'Linux' && matrix.runs_valgrind == true

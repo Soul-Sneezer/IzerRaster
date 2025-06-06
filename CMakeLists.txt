@@ -1,11 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 if(WIN32)
-    # Add Gaming SDK include path if the environment variable is set
-    if(DEFINED ENV{WINDOWS_GAMING_SDK})
-        include_directories("$ENV{WINDOWS_GAMING_SDK}/Include/10.0.20348.0/um")
-        include_directories("$ENV{WINDOWS_GAMING_SDK}/Include/10.0.20348.0/shared")
-    endif()
+    set(SDL_WINDOWS_GAMING_INPUT OFF CACHE BOOL "Disable Windows Gaming Input" FORCE)
 endif()
 
 project(IzerRaster LANGUAGES CXX)
