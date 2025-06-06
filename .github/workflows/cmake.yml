@@ -241,24 +241,6 @@ jobs:
         run: |
           choco install ninja
 
-      - name: Install SDL3 (Windows)
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          # Clone SDL
-          git clone https://github.com/libsdl-org/SDL.git
-          cd SDL
-          
-          # Configure SDL without gaming input
-          cmake -B build -DSDL_WINDOWS_GAMING_INPUT=OFF -DCMAKE_BUILD_TYPE=Release -DSDL_TEST=OFF -DBUILD_SHARED_LIBS=ON
-          
-          # Build and install
-          cmake --build build --config Release --parallel 4
-          cmake --install build --prefix "$env:GITHUB_WORKSPACE/SDL_install"
-          
-          # Add to CMAKE_PREFIX_PATH
-          echo "CMAKE_PREFIX_PATH=$env:GITHUB_WORKSPACE/SDL_install" >> $env:GITHUB_ENV
-
       - name: Install valgrind
         if: runner.os == 'Linux' && matrix.runs_valgrind == true
         run: |

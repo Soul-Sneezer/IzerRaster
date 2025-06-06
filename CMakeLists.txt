@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
-if(WIN32)
-    set(SDL_WINDOWS_GAMING_INPUT OFF CACHE BOOL "Disable Windows Gaming Input" FORCE)
-endif()
+#if(WIN32)
+#    set(SDL_WINDOWS_GAMING_INPUT OFF CACHE BOOL "Disable Windows Gaming Input" FORCE)
+#endif()
 
 project(IzerRaster LANGUAGES CXX)
 
