@@ -13,19 +13,24 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Install vcpkg
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git
+        cd vcpkg
+        ./bootstrap-vcpkg.bat
+        ./vcpkg integrate install
+        echo "VCPKG_ROOT=$env:GITHUB_WORKSPACE/vcpkg" >> $env:GITHUB_ENV
+
     - name: Install GLM (Windows)
       if: runner.os == 'Windows'
       shell: powershell
       run: |
-        # First try direct download from GitHub
-        git clone https://github.com/g-truc/glm.git
-        cd glm
-        cmake -B build -DGLM_TEST_ENABLE=OFF
-        cmake --build build --config Release
-        cmake --install build --prefix "$env:GITHUB_WORKSPACE/glm-install"
+        $env:VCPKG_ROOT/vcpkg install glm:x64-windows
         
-        # Add GLM to CMAKE_PREFIX_PATH
-        echo "CMAKE_PREFIX_PATH=$env:GITHUB_WORKSPACE/glm-install;$env:CMAKE_PREFIX_PATH" >> $env:GITHUB_ENV
+        # Debug: Check where GLM was installed
+        ls "$env:VCPKG_ROOT/installed/x64-windows/include/glm"
 
     # Cache SDL3 install directory
     - name: Cache SDL3 install
