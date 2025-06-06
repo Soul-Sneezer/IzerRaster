@@ -1,7 +1,6 @@
 # --- Build Directories ---
 # Standard CMake build directory
 /build/
-/external/
 
 # --- IDE Configuration ---
 # Visual Studio Code
@@ -14,10 +13,9 @@
 # my_renderer
 
 # Shared Libraries / Dependencies (as requested)
-*.dll
 *.so
 *.dylib
-
+*.dll
 # Static Libraries
 *.a
 *.lib
@@ -27,7 +25,6 @@
 
 # Object files
 *.o
-*.obj
 
 # Precompiled Headers
 *.pch

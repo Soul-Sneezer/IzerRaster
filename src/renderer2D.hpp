@@ -4,6 +4,10 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_events.h> 
+#include <SDL3/SDL_keycode.h> 
 #include <SDL3_ttf/SDL_ttf.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
@@ -16,6 +20,21 @@
 #include <stdexcept> 
 #include <iostream> 
 #include <optional>
+#include "texture.hpp"
+
+struct Light 
+{
+   glm::vec3 position;
+   glm::vec3 colour;
+   float intensity;
+};
+
+struct Material 
+{
+   glm::vec3 diffuseColour;
+   glm::vec3 specularColour;
+   float shininess;
+};  
 
 struct RGBA 
 {
@@ -29,14 +48,18 @@ struct RGBA
     RGBA() : r(0), g(0), b(0), a(255) {}
 };
 
-struct triangle
-{
-    glm::vec4 p[3];
+struct triangle {
+    glm::vec4 p[3];   // poziţii
+    glm::vec2 t[3];   // **NEW** coordonate UV
 };
+
+
+
 
 struct mesh 
 {
     std::vector<triangle> tris;
+    Texture*  texture = nullptr;
 
     bool LoadFromObjectFile(const std::string& sFilename);
 };
@@ -47,6 +70,22 @@ struct InputEvent
     int key;
     int mouseX;
     int mouseY;
+    int wheelY;
+    int wheelX;
+};
+
+enum class RenderMode {
+    WIREFRAME,              // doar muchii
+    SHADED,                 // culori plane
+    SHADED_WIREFRAME,       // culori + sârmă
+    TEXTURED,               // textură (fără sârmă)
+    TEXTURED_WIREFRAME      // textură + sârmă
+};
+struct Tri {
+    glm::vec2 p[3];   // screen-space xy
+    float     z[3];   // adâncimi
+    glm::vec2 t[3];   //  ← ADĂUGĂ UV-urile!
+    float     depth;
 };
 
 class Renderer2D
@@ -56,6 +95,8 @@ private:
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* screenTexture = nullptr;
     std::vector<RGBA> screenBuffer;
+    Texture* currentTex = nullptr;   // pointer la textura activă
+    mesh*        currentMesh = nullptr;  
 
     //stuff for projections
     mesh meshCube;
@@ -64,7 +105,7 @@ private:
     float theta;
     glm::vec4 cameraPos;
 
-    
+       
     TTF_Font* font; 
     uint32_t frameCount = 0;            // Frames since last FPS update
     uint32_t fps = 0;                   // Current FPS value
@@ -74,7 +115,21 @@ private:
     int windowWidth;
     int windowHeight;
 
+std::vector<float> depthBufferCPU;   //  ← NOU!
+              // deja există
+
+    float    translate       = 8.0f;
+    float    pitch_angle     = 0.0f;
+    bool     free_rotate     = false;
+    float    free_theta      = 0.0f;
+    float    rotation_step   = 0.1f;
+
+    Uint64 perfFreq = 0;
+    Uint64 lastPerfCounter = 0;
+
+
     static uint64_t lastTime;
+
 
     void drawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2, RGBA rgba);
     void update(float deltaTime);
@@ -82,7 +137,15 @@ private:
     void fillBottomFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void fillTopFlatTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
 
+protected:
+    bool useGPU;
+    uint32_t* cudaPixelBuffer = nullptr;
+    float* cudaDepthBuffer = nullptr;
+     glm::mat4 currentTransform {1.0f};
+
 public:
+    RenderMode mode;
+
     Renderer2D(const std::string appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480);
     
     mesh applyRenderMatrix(glm::mat4 mat, mesh objMesh);
@@ -92,7 +155,6 @@ public:
     void Run();
     void Render();
     virtual void UserUpdate(); // override this to draw
-    virtual void UserInit(); // override this to perform actions during initialization
     void Quit();
     void clearScreen();
     void drawPoint(uint16_t x, uint16_t y, RGBA rgba);
@@ -104,8 +166,12 @@ public:
     void drawTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, RGBA rgba);
     void drawCube();
+    void gpuRender(const mesh& meshObj);
     mesh loadObj(std::string path);
     void drawObj(mesh obj);
     std::vector<InputEvent> poolInputEvents();
     std::optional<InputEvent> detectInputEvent();
+    Texture* loadTexture(const std::string& path);
+    void     setTexture(Texture* t);
+    void fillTexturedTri(const triangle& tri, const Texture* tex);
 };
