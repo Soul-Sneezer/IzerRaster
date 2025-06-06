@@ -84,9 +84,12 @@ target_include_directories(IzerRaster PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR} # Directory containing this CMakeLists.txt
 )
 
-find_path(GLM_INCLUDE_DIR glm/glm.hpp)
+
+find_path(GLM_INCLUDE_DIR glm/glm.hpp
+    PATHS ${CMAKE_PREFIX_PATH}/include
+)
 if(NOT GLM_INCLUDE_DIR)
-  message(FATAL_ERROR "GLM not found!")
+    message(FATAL_ERROR "GLM not found!")
 endif()
 
 target_include_directories(IzerRaster PRIVATE ${GLM_INCLUDE_DIR})
