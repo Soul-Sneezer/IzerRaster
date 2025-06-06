@@ -21,16 +21,19 @@ runs:
         cd vcpkg
         ./bootstrap-vcpkg.bat
         ./vcpkg integrate install
-        echo "VCPKG_ROOT=$env:GITHUB_WORKSPACE/vcpkg" >> $env:GITHUB_ENV
+        echo "VCPKG_ROOT=$env:GITHUB_WORKSPACE\vcpkg" >> $env:GITHUB_ENV
 
     - name: Install GLM (Windows)
       if: runner.os == 'Windows'
       shell: powershell
       run: |
-        $env:VCPKG_ROOT/vcpkg install glm:x64-windows
+        # Use Join-Path for proper path handling
+        $vcpkg = Join-Path $env:VCPKG_ROOT "vcpkg.exe"
+        & $vcpkg install glm:x64-windows
         
         # Debug: Check where GLM was installed
-        ls "$env:VCPKG_ROOT/installed/x64-windows/include/glm"
+        $glmPath = Join-Path $env:VCPKG_ROOT "installed\x64-windows\include\glm"
+        ls $glmPath
 
     # Cache SDL3 install directory
     - name: Cache SDL3 install
