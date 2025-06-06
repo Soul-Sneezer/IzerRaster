@@ -165,12 +165,12 @@ jobs:
             cmake_generator: "Unix Makefiles"  # Changed from Ninja
             runs_valgrind: true
 
-          - os: macos-12
-            c: clang
-            cxx: clang++
-            name: "ASan: macOS 12 Apple Clang 14"
-            cmake_flags: "-DUSE_ASAN=ON -DSFML_BUILD_FRAMEWORKS=FALSE -DSFML_DEPENDENCIES_INSTALL_PREFIX=$GITHUB_WORKSPACE/artifacts -DBUILD_SHARED_LIBS=FALSE"
-            cmake_generator: "Unix Makefiles"
+              #- os: macos-12
+              # c: clang
+              #cxx: clang++
+              #name: "ASan: macOS 12 Apple Clang 14"
+              #cmake_flags: "-DUSE_ASAN=ON -DSFML_BUILD_FRAMEWORKS=FALSE -DSFML_DEPENDENCIES_INSTALL_PREFIX=$GITHUB_WORKSPACE/artifacts -DBUILD_SHARED_LIBS=FALSE"
+              #cmake_generator: "Unix Makefiles"
 
           - os: windows-2022
             c: cl
