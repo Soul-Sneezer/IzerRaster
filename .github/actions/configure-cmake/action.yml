@@ -9,6 +9,10 @@ inputs:
   custom_flags:
     description: 'Custom CMake configuration flags'
     required: false
+  compiler: 
+    description: 'Compiler to use (msvc or mingw)'
+    required: false
+    default: 'msvc'
 
 runs:
   using: "composite"
@@ -28,7 +32,8 @@ runs:
       shell: powershell
       run: |
         $vcpkg = Join-Path $env:VCPKG_ROOT "vcpkg.exe"
-        & $vcpkg install glm:x64-windows
+        $triplet = if ("${{ inputs.compiler }}" -eq "mingw") { "x64-mingw-dynamic" } else { "x64-windows" }
+        & $vcpkg install glm:$triplet
         
         # Debug: Show GLM installation paths
         $glmPath = Join-Path $env:VCPKG_ROOT "installed\x64-windows"
@@ -150,7 +155,6 @@ runs:
         brew update
         brew install glm
  
-    # CMake configuration steps
     - name: Configure CMake (MinGW)
       shell: bash
       if: runner.os == 'Windows' && matrix.cxx == 'g++'
@@ -161,7 +165,9 @@ runs:
           -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/artifacts \
           -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
           -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
-          -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg/installed/x64-windows/share" \
+          -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+          -DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic \
+          -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/sdl3-install" \
           -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON \
           ${{ inputs.custom_flags }}
 
