@@ -1,9 +1,15 @@
-# CMakeLists.txt
-
-# Minimum CMake version required (adjust if needed, pybind11 might need newer)
 cmake_minimum_required(VERSION 3.15)
 
-# Project Name (should match the output module base name)
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-config-debug/build_config")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-config-release/build_config")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-config-relwithdebinfo/build_config")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include-config-minsizerel/build_config")
+
+file(WRITE "${CMAKE_BINARY_DIR}/include-config-debug/build_config/SDL3BuildConfig.h" "#define SDL_DISABLE_WINDOWS_GAMING_INPUT 1\n")
+file(WRITE "${CMAKE_BINARY_DIR}/include-config-release/build_config/SDL3BuildConfig.h" "#define SDL_DISABLE_WINDOWS_GAMING_INPUT 1\n")
+file(WRITE "${CMAKE_BINARY_DIR}/include-config-relwithdebinfo/build_config/SDL3BuildConfig.h" "#define SDL_DISABLE_WINDOWS_GAMING_INPUT 1\n")
+file(WRITE "${CMAKE_BINARY_DIR}/include-config-minsizerel/build_config/SDL3BuildConfig.h" "#define SDL_DISABLE_WINDOWS_GAMING_INPUT 1\n")
+
 project(IzerRaster LANGUAGES CXX)
 
 # Set C++ standard (C++17 as requested)
