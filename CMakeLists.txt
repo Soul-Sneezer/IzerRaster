@@ -1,13 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 
-set(SDL_DISABLE_WINDOWS_GAMING_INPUT TRUE)
-set(SDL_FORCE_STATIC_VCRT ON)
-set(SDL_TEST OFF)
-
 if(WIN32)
-    set(SDL_DIRECTX OFF)
-    set(SDL_RENDER_D3D OFF)
-    set(SDL_VIDEO_RENDER_D3D OFF)
+    # Add Gaming SDK include path if the environment variable is set
+    if(DEFINED ENV{WINDOWS_GAMING_SDK})
+        include_directories("$ENV{WINDOWS_GAMING_SDK}/build/native/include")
+    endif()
 endif()
 
 project(IzerRaster LANGUAGES CXX)

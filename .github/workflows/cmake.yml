@@ -241,6 +241,20 @@ jobs:
         run: |
           choco install ninja
 
+      - name: Install Gaming SDK (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          # Download the Gaming SDK
+          Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Windows.Gaming.Input/1.0.24201" -OutFile "gaming.zip"
+          Expand-Archive -Path "gaming.zip" -DestinationPath "gaming"
+          
+          # Set environment variable so SDL can find the SDK
+          echo "WINDOWS_GAMING_SDK=$env:GITHUB_WORKSPACE/gaming" >> $env:GITHUB_ENV
+          
+          # Add the include path to CMAKE_PREFIX_PATH
+          echo "CMAKE_PREFIX_PATH=$env:GITHUB_WORKSPACE/gaming/build/native/include" >> $env:GITHUB_ENV
+
       - name: Install valgrind
         if: runner.os == 'Linux' && matrix.runs_valgrind == true
         run: |
