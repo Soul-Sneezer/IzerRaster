@@ -245,15 +245,20 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          # Download the Gaming SDK
-          Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Windows.Gaming.Input/1.0.24201" -OutFile "gaming.zip"
-          Expand-Archive -Path "gaming.zip" -DestinationPath "gaming"
+          # Download Windows SDK installer
+          $url = "https://go.microsoft.com/fwlink/?linkid=2173743"  # Windows 10 SDK installer
+          $output = "$env:TEMP\winsdksetup.exe"
+          Invoke-WebRequest -Uri $url -OutFile $output
           
-          # Set environment variable so SDL can find the SDK
-          echo "WINDOWS_GAMING_SDK=$env:GITHUB_WORKSPACE/gaming" >> $env:GITHUB_ENV
+          # Install Windows SDK (silent install, only Gaming components)
+          Start-Process -FilePath $output -ArgumentList "/features OptionId.GamingFeature /quiet /norestart" -Wait
           
-          # Add the include path to CMAKE_PREFIX_PATH
-          echo "CMAKE_PREFIX_PATH=$env:GITHUB_WORKSPACE/gaming/build/native/include" >> $env:GITHUB_ENV
+          # The Gaming SDK will be installed to the default location:
+          # C:\Program Files (x86)\Windows Kits\10\Include\10.0.20348.0
+          echo "WINDOWS_GAMING_SDK=C:\Program Files (x86)\Windows Kits\10" >> $env:GITHUB_ENV
+          
+          # Add the SDK path to CMAKE_PREFIX_PATH
+          echo "CMAKE_PREFIX_PATH=C:\Program Files (x86)\Windows Kits\10\Include\10.0.20348.0" >> $env:GITHUB_ENV
 
       - name: Install valgrind
         if: runner.os == 'Linux' && matrix.runs_valgrind == true
