@@ -21,25 +21,25 @@ runs:
         path: sdl3-install
         key: ${{ runner.os }}-sdl3-${{ hashFiles('**/CMakeLists.txt') }}
 
-      - name: Install SDL3 (Windows)
-        if: runner.os == 'Windows' && steps.cache-sdl3.outputs.cache-hit != 'true'
-        shell: powershell
-        run: |
-          git clone https://github.com/libsdl-org/SDL.git -b main SDL3
-          cd SDL3
-          
-          # Create empty gaming input files to satisfy the include requirements
-          #$null > src/joystick/windows/SDL_windowsgameinput.h
-          #$null > src/joystick/windows/SDL_windowsgameinput.c
-          
-          # Configure SDL with gaming input explicitly disabled
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -DSDL_TEST=OFF -DBUILD_SHARED_LIBS=ON -DSDL_WINDOWS_GAMING_INPUT=OFF
-          
-          # Build and install
-          cmake --build build --config Release --parallel 4
-          cmake --install build --prefix "$env:GITHUB_WORKSPACE/SDL_install"
-          
-          echo "CMAKE_PREFIX_PATH=$env:GITHUB_WORKSPACE/SDL_install" >> $env:GITHUB_ENV
+    - name: Install SDL3 (Windows)
+      if: runner.os == 'Windows' && steps.cache-sdl3.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        git clone https://github.com/libsdl-org/SDL.git -b main SDL3
+        cd SDL3
+        
+        # Create empty gaming input files to satisfy the include requirements
+        #$null > src/joystick/windows/SDL_windowsgameinput.h
+        #$null > src/joystick/windows/SDL_windowsgameinput.c
+        
+        # Configure SDL with gaming input explicitly disabled
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DSDL_TEST=OFF -DBUILD_SHARED_LIBS=ON -DSDL_WINDOWS_GAMING_INPUT=OFF
+        
+        # Build and install
+        cmake --build build --config Release --parallel 4
+        cmake --install build --prefix "$env:GITHUB_WORKSPACE/SDL_install"
+        
+        echo "CMAKE_PREFIX_PATH=$env:GITHUB_WORKSPACE/SDL_install" >> $env:GITHUB_ENV
 
     # Install SDL3 if not cached
     - name: Install SDL3 (Linux)
