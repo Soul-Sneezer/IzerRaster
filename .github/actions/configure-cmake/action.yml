@@ -31,7 +31,12 @@ runs:
         # Create empty gaming input files to satisfy the include requirements
         #$null > src/joystick/windows/SDL_windowsgameinput.h
         #$null > src/joystick/windows/SDL_windowsgameinput.c
-        
+       
+        # Modify SDL_gameinput.h to prevent including gameinput.h
+        $content = Get-Content src/core/windows/SDL_gameinput.h
+        $content = $content -replace '#ifdef HAVE_GAMEINPUT_H', '#if 0 // Disabled HAVE_GAMEINPUT_H'
+        $content | Set-Content src/core/windows/SDL_gameinput.h
+
         # Configure SDL with gaming input explicitly disabled
         cmake -B build -DCMAKE_BUILD_TYPE=Release -DSDL_TEST=OFF -DBUILD_SHARED_LIBS=ON -DSDL_WINDOWS_GAMING_INPUT=OFF
         
