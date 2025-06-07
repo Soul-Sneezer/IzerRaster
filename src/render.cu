@@ -142,7 +142,7 @@ __global__ static void rasterizeTri(uint32_t* colorBuf, float* depthBuf,
     glm::vec3 specular = d_material.specularColour * spec * d_light.intensity;
     glm::vec3 colour = (diffuse + specular) * d_light.colour;
 
-    colour += 0.1f * d_material.diffuseColour;
+    colour += 0.5f * d_material.diffuseColour;
     colour = glm::clamp(colour, 0.0f, 1.0f);
 
     uint32_t texColor = flatColor;

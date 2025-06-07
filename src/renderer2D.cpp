@@ -28,7 +28,6 @@ uint64_t Renderer2D::lastTime = 0;
 
 Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t height) : appName(appName), windowWidth(width), windowHeight(height)
 {
-    setTexturing(false);
 }
 
 void Renderer2D::Init()
@@ -37,6 +36,7 @@ void Renderer2D::Init()
 
     int deviceCount = 0;
     cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
+
     if (cudaStatus == cudaSuccess && deviceCount > 0) {
         std::cout << "CUDA device(s) found: " << deviceCount << ". Using GPU mode.\n";
         this->useGPU = true;
@@ -69,6 +69,20 @@ void Renderer2D::Init()
         return;
     }
 
+    int win_x, win_y;
+    int win_w, win_h;
+
+    SDL_GetWindowPosition(window, &win_x, &win_y);
+    SDL_GetWindowSize(window, &win_w, &win_h);
+
+    float centerX = win_x + win_w / 2.0f;
+    float centerY = win_y + win_h / 2.0f;
+
+    SDL_WarpMouseGlobal(centerX, centerY);
+
+    //SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_CENTER, "1");
+    //SDL_SetWindowRelativeMouseMode(window, true);
+
     if (!SDL_SetRenderVSync(renderer, SDL_RENDERER_VSYNC_DISABLED)) {
     std::cerr << "SDL_SetRenderVSync failed: " << SDL_GetError() << "\n";
     }
@@ -99,7 +113,7 @@ void Renderer2D::Init()
 
     proj = glm::perspective(glm::radians(fFov), fAspectRatio, fNear, fFar);
 
-    cameraPos = glm::vec4{0};
+    cameraPos = glm::vec3{0.0f, 0.0f, -5.0f};
 
     isRunning = true;
 
@@ -184,14 +198,55 @@ void Renderer2D::Render()
 
 void Renderer2D::UserUpdate()
 {
+    float cameraSpeed = 0.2f;
+    float sensitivity = 0.05f;
+
     for (auto &ev : poolInputEvents())
     {
-        if (ev.type == "MOUSEWHEEL") {
+        if (ev.type == "MOUSEMOTION") {
+            int mouseX = ev.mouseX;
+            int mouseY = ev.mouseY;
+            if (firstMouse) {
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+                firstMouse = false;
+            }
+
+            int xoffset = mouseX - lastMouseX;
+            int yoffset = lastMouseY - mouseY;
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+
+            cameraYaw   += xoffset * sensitivity;
+            cameraPitch += yoffset * sensitivity;
+
+            if (cameraPitch > 89.0f)  cameraPitch = 89.0f;
+            if (cameraPitch < -89.0f) cameraPitch = -89.0f;
+
+            float yawRad   = glm::radians(cameraYaw);
+            float pitchRad = glm::radians(cameraPitch);
+            
+            cameraFront.x = cosf(yawRad) * cosf(pitchRad);
+            cameraFront.y = sinf(pitchRad);
+            cameraFront.z = sinf(yawRad) * cosf(pitchRad);
+            cameraFront = glm::normalize(cameraFront);
+        }
+        else if (ev.type == "MOUSEWHEEL") {
             if (ev.wheelY > 0)      translate -= 1.0f;
             else if (ev.wheelY < 0) translate += 1.0f;
         }
         else if (ev.type == "KEYDOWN") {
+            glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+            glm::vec3 right = glm::normalize(glm::cross(cameraFront, worldUp));
+
             switch (ev.key) {
+              case SDLK_UP:     cameraPos -= cameraSpeed * cameraFront; break;
+              case SDLK_DOWN:   cameraPos += cameraSpeed * cameraFront; break;
+              case SDLK_LEFT:   cameraPos -= right * cameraSpeed; break;
+              case SDLK_RIGHT:  cameraPos += right * cameraSpeed; break;
+              case SDLK_LSHIFT: cameraPos.y += cameraSpeed; break;
+              case SDLK_SPACE:  cameraPos.y -= cameraSpeed; break;
+            
               case SDLK_ESCAPE: Quit();     break;
               case SDLK_W:      pitch_angle -= rotation_step; break;
               case SDLK_S:      pitch_angle += rotation_step; break;
@@ -208,6 +263,8 @@ void Renderer2D::UserUpdate()
                 }
                 break;
             }
+
+            // cameraFront = glm::normalize(objectCenter - cameraPos);
         }
     }
 
@@ -612,9 +669,9 @@ mesh Renderer2D::loadObj(std::string path)
               << (needGenerateUV ? " (UV generated spherically)\n"
                                  : " (UV loaded from file)\n");
 
+    // glm::vec3 objectCenter = computeObjectCenter(obj);
     return obj;
 }
-
 
 
 // .obj drawing
@@ -638,11 +695,28 @@ void Renderer2D::simpleRender(mesh meshObj)
 
     triangle triProjected;
 
+    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, translate));
+
+    glm::mat4 RX, RZ;
+    if (!free_rotate) {
+        RX = glm::rotate(glm::mat4(1.0f), pitch_angle, glm::vec3(1, 0, 0));
+        RZ = glm::rotate(glm::mat4(1.0f), theta,       glm::vec3(0, 0, 1));
+    } else {
+        RX = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(1, 0, 0));
+        RZ = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(0, 0, 1));
+    }
+
+    glm::mat4 model = T * RX * RZ;
+    glm::mat4 mvp = proj * view * model; 
+
+    mesh transformedMesh = applyRenderMatrix(mvp, meshObj);
+
     // glm::mat4 transl = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
 
     // mesh newMesh = applyRenderMatrix(transl * rotX * rotZ, meshObj);
 
-    for (auto triTranslated : meshObj.tris)
+    for (auto triTranslated : transformedMesh.tris)
     {
 
         // Calculating the normals in order to display the visible triangles
@@ -659,6 +733,11 @@ void Renderer2D::simpleRender(mesh meshObj)
         normal.y = line1.z * line2.x - line1.x * line2.z;
         normal.z = line1.x * line2.y - line1.y * line2.x;
 
+        glm::vec3 toCamera = -glm::vec3(triTranslated.p[0]);
+        if (glm::dot(normal, toCamera) < 0.0f) {
+            continue;
+        }
+
         float l = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
         normal.x /= l;
         normal.y /= l;
@@ -669,9 +748,9 @@ void Renderer2D::simpleRender(mesh meshObj)
         {
 
             for (int i = 0; i < 3; ++i) {
-    triProjected.p[i] = proj * triTranslated.p[i];
-    triProjected.t[i] = triTranslated.t[i];   //  ▲▲▲  păstrează UV-ul
-}
+                triProjected.p[i] = proj * triTranslated.p[i];
+                triProjected.t[i] = triTranslated.t[i];   //  ▲▲▲  păstrează UV-ul
+            }
 
 
             for (int i = 0; i < 3; i++)
@@ -731,12 +810,12 @@ void Renderer2D::simpleRender(mesh meshObj)
          if (mode == RenderMode::SHADED_WIREFRAME || mode == RenderMode::WIREFRAME || mode == RenderMode::TEXTURED_WIREFRAME)
         {
             // Draw wireframe
-            drawLine(static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-                     static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y), RGBA(120, 120, 120, 100));
+            drawLine(static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),  
+                     static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y), RGBA(255, 255, 255, 255));
             drawLine(static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-                     static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y), RGBA(120, 120, 120, 100));
+                     static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y), RGBA(255, 255, 255, 255));
             drawLine(static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                     static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y), RGBA(120, 120, 120, 100));
+                     static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y), RGBA(255, 255, 255, 255));
         }
 
    }
@@ -781,7 +860,8 @@ void Renderer2D::gpuRender(const mesh &newObj)
     float time = SDL_GetTicks() * 0.001f;
 
     // 1) Construim matricile View / Projection
-    glm::mat4 viewMat = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -5));
+    glm::mat4 viewMat = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    
     glm::mat4 projMat = glm::perspective(
         glm::radians(60.0f),
         float(windowWidth) / float(windowHeight),
@@ -904,7 +984,7 @@ void Renderer2D::gpuRender(const mesh &newObj)
         mode == RenderMode::SHADED_WIREFRAME ||
         mode == RenderMode::TEXTURED_WIREFRAME)
     {
-        uint32_t lineColor = 0xFF00FF00u;
+        uint32_t lineColor = 0x80FFFFFFu;
         auto clampPoint = [&](int &x, int &y)
         {
             return x >= 0 && x < windowWidth && y >= 0 && y < windowHeight;
@@ -1287,6 +1367,8 @@ std::vector<InputEvent> Renderer2D::poolInputEvents()
 Texture* Renderer2D::loadTexture(const std::string& path)
 {
     currentTex = new Texture(path);             // ① încarcă în RAM & VRAM
+
+    std::cerr << (useGPU ? "Folosec GPU" : "Folosec CPU") << '\n';;
 
     if (useGPU) {                               // ② trimite către kernel
         uploadTexture(currentTex->device, currentTex->w, currentTex->h);

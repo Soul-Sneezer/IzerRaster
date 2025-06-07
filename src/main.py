@@ -91,35 +91,33 @@ class GuiApp(tk.Tk):
             # Dimensiunea ferestrei SDL (poți ajusta după plac)
             width, height = 1280, 720
             renderer = CustomRenderer("IzerRaster Window", width, height, self.obj_path, self.tex_path)
+            renderer.Init()
+
+            ok = renderer.loadObj(self.obj_path)
+            if not ok:
+                raise RuntimeError(f"Nu am putut încărca OBJ-ul:\n  {self.obj_path}")
+            tex = renderer.loadTexture(self.tex_path)
+            if tex is None:
+                raise RuntimeError(f"Nu am putut încărca textura:\n  {self.tex_path}")
+            renderer.setTexture(tex)
+
+            renderer.mode = IzerRaster.RenderMode.TEXTURED_WIREFRAME
+            
         except Exception as e:
             messagebox.showerror("Eroare la inițializare", str(e))
             self.deiconify()
             return
 
         # Inițializare SDL/CUDA/Tekextură și rulare
-        renderer.Init()
+        # renderer.Init()
         renderer.Run()
         renderer.Quit()
-        self.destroy()  # închidem GUI după ce renderer-ul se oprește
+        self.deiconify()
+    #     self.destroy()  # închidem GUI după ce renderer-ul se oprește
 
 class CustomRenderer(IzerRaster.Renderer2D):
     def __init__(self, appName, width, height, obj_path, tex_path):
         super().__init__(appName, width, height)
-
-        # 1) Load .obj
-        ok = self.loadObj(obj_path)
-        if not ok:
-            raise RuntimeError(f"Nu am putut încărca OBJ-ul:\n  {obj_path}")
-
-        # 2) Load textură
-        tex = self.loadTexture(tex_path)
-        if tex is None:
-            raise RuntimeError(f"Nu am putut încărca textura:\n  {tex_path}")
-        self.setTexture(tex)
-            
-
-        # 3) Setăm mod implicit de randare (poți schimba în WIREFRAME, SHADED etc.)
-        self.mode = IzerRaster.RenderMode.WIREFRAME
 
         # Inițializare parametri de transformare
         self.theta = 0.0
