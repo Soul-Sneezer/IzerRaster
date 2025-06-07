@@ -6,7 +6,8 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_mouse.h>
-#include <SDL3/SDL_events.h> 
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_hints.h> 
 #include <SDL3/SDL_keycode.h> 
 #include <SDL3_ttf/SDL_ttf.h>
 #include <glm/glm.hpp>
@@ -91,6 +92,17 @@ struct Tri {
 class Renderer2D
 {
 private:
+    // Parametrii pentru camera
+    glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    // Parametrii pentru mouse
+    float cameraYaw = -90.0f;
+    float cameraPitch = 0.0f;
+    bool firstMouse = true;
+    int lastMouseX = 0, lastMouseY = 0;
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* screenTexture = nullptr;
@@ -103,7 +115,7 @@ private:
     mesh obj;
     glm::mat4 rotX, rotZ, transl, proj;
     float theta;
-    glm::vec4 cameraPos;
+
 
        
     TTF_Font* font; 
@@ -175,3 +187,6 @@ public:
     void     setTexture(Texture* t);
     void fillTexturedTri(const triangle& tri, const Texture* tex);
 };
+
+
+

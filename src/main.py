@@ -100,7 +100,8 @@ class GuiApp(tk.Tk):
         renderer.Init()
         renderer.Run()
         renderer.Quit()
-        self.destroy()  # închidem GUI după ce renderer-ul se oprește
+        self.deiconify()
+    #     self.destroy()  # închidem GUI după ce renderer-ul se oprește
 
 class CustomRenderer(IzerRaster.Renderer2D):
     def __init__(self, appName, width, height, obj_path, tex_path):
@@ -112,10 +113,10 @@ class CustomRenderer(IzerRaster.Renderer2D):
             raise RuntimeError(f"Nu am putut încărca OBJ-ul:\n  {obj_path}")
 
         # 2) Load textură
-        tex = self.loadTexture(tex_path)
-        if tex is None:
-            raise RuntimeError(f"Nu am putut încărca textura:\n  {tex_path}")
-        self.setTexture(tex)
+        # tex = self.loadTexture(tex_path)
+        # if tex is None:
+        #     raise RuntimeError(f"Nu am putut încărca textura:\n  {tex_path}")
+        # self.setTexture(tex)
             
 
         # 3) Setăm mod implicit de randare (poți schimba în WIREFRAME, SHADED etc.)

@@ -13,15 +13,15 @@
 #include "render.h"        // pentru uploadTexture()
 
 Light light = {
-         .position = glm::vec3(0.0f, 10.0f, 10.0f), 
-         .colour = glm::vec3(1.0f, 1.0f, 1.0f),
-         .intensity = 1.0f
+        .position = glm::vec3(0.0f, 10.0f, 10.0f), 
+        .colour = glm::vec3(1.0f, 1.0f, 1.0f),
+        .intensity = 1.0f
 };
 
 Material mat = {
-         .diffuseColour = glm::vec3(1.0f, 1.0f, 1.0f),
-         .specularColour = glm::vec3(1.0f, 1.0f, 1.0f),
-         .shininess = 32.0f
+        .diffuseColour = glm::vec3(1.0f, 1.0f, 1.0f),
+        .specularColour = glm::vec3(1.0f, 1.0f, 1.0f),
+        .shininess = 32.0f
 };
 
 uint64_t Renderer2D::lastTime = 0;
@@ -69,6 +69,20 @@ void Renderer2D::Init()
         return;
     }
 
+    int win_x, win_y;
+    int win_w, win_h;
+
+    SDL_GetWindowPosition(window, &win_x, &win_y);
+    SDL_GetWindowSize(window, &win_w, &win_h);
+
+    float centerX = win_x + win_w / 2.0f;
+    float centerY = win_y + win_h / 2.0f;
+
+    SDL_WarpMouseGlobal(centerX, centerY);
+
+    //SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_CENTER, "1");
+    //SDL_SetWindowRelativeMouseMode(window, true);
+
     if (!SDL_SetRenderVSync(renderer, SDL_RENDERER_VSYNC_DISABLED)) {
     std::cerr << "SDL_SetRenderVSync failed: " << SDL_GetError() << "\n";
     }
@@ -99,7 +113,7 @@ void Renderer2D::Init()
 
     proj = glm::perspective(glm::radians(fFov), fAspectRatio, fNear, fFar);
 
-    cameraPos = glm::vec4{0};
+    cameraPos = glm::vec3{0.0f, 0.0f, -5.0f};
 
     isRunning = true;
 
@@ -120,7 +134,7 @@ void Renderer2D::Init()
 
     }
 
-     perfFreq = SDL_GetPerformanceFrequency();
+    perfFreq = SDL_GetPerformanceFrequency();
     lastPerfCounter = SDL_GetPerformanceCounter();
 }
 
@@ -144,9 +158,9 @@ void Renderer2D::Run()
         Renderer2D::lastTime = GetCurrentTime();
     
         uploadLighting(
-                 Light{light.position},
-                 cameraPos,
-                 Material{mat.diffuseColour, mat.specularColour, mat.shininess}
+                Light{light.position},
+                cameraPos,
+                Material{mat.diffuseColour, mat.specularColour, mat.shininess}
         );        
     
         // Render one frame (input handled inside Render/UserUpdate)
@@ -171,7 +185,7 @@ void Renderer2D::Render()
 
     SDL_RenderPresent(renderer);
 
-      // end of frame
+    // end of frame
     Uint64 frameEnd = SDL_GetPerformanceCounter();
     double frameTime = double(frameEnd - frameStart) / double(perfFreq);  // seconds
     double fps = 1.0 / frameTime;
@@ -184,30 +198,73 @@ void Renderer2D::Render()
 
 void Renderer2D::UserUpdate()
 {
+    float cameraSpeed = 0.2f;
+    float sensitivity = 0.05f;
+
     for (auto &ev : poolInputEvents())
     {
-        if (ev.type == "MOUSEWHEEL") {
+        if (ev.type == "MOUSEMOTION") {
+            int mouseX = ev.mouseX;
+            int mouseY = ev.mouseY;
+            if (firstMouse) {
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+                firstMouse = false;
+            }
+
+            int xoffset = mouseX - lastMouseX;
+            int yoffset = lastMouseY - mouseY;
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+
+            cameraYaw   += xoffset * sensitivity;
+            cameraPitch += yoffset * sensitivity;
+
+            if (cameraPitch > 89.0f)  cameraPitch = 89.0f;
+            if (cameraPitch < -89.0f) cameraPitch = -89.0f;
+
+            float yawRad   = glm::radians(cameraYaw);
+            float pitchRad = glm::radians(cameraPitch);
+            
+            cameraFront.x = cosf(yawRad) * cosf(pitchRad);
+            cameraFront.y = sinf(pitchRad);
+            cameraFront.z = sinf(yawRad) * cosf(pitchRad);
+            cameraFront = glm::normalize(cameraFront);
+        }
+        else if (ev.type == "MOUSEWHEEL") {
             if (ev.wheelY > 0)      translate -= 1.0f;
             else if (ev.wheelY < 0) translate += 1.0f;
         }
         else if (ev.type == "KEYDOWN") {
+            glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+            glm::vec3 right = glm::normalize(glm::cross(cameraFront, worldUp));
+
             switch (ev.key) {
-              case SDLK_ESCAPE: Quit();     break;
-              case SDLK_W:      pitch_angle -= rotation_step; break;
-              case SDLK_S:      pitch_angle += rotation_step; break;
-              case SDLK_A:      theta       -= rotation_step; break;
-              case SDLK_D:      theta       += rotation_step; break;
-              case SDLK_R:
+            case SDLK_UP:     cameraPos -= cameraSpeed * cameraFront; break;
+            case SDLK_DOWN:   cameraPos += cameraSpeed * cameraFront; break;
+            case SDLK_LEFT:   cameraPos -= right * cameraSpeed; break;
+            case SDLK_RIGHT:  cameraPos += right * cameraSpeed; break;
+            case SDLK_LSHIFT: cameraPos.y += cameraSpeed; break;
+            case SDLK_SPACE:  cameraPos.y -= cameraSpeed; break;
+            
+            case SDLK_ESCAPE: Quit();     break;
+            case SDLK_W:      pitch_angle -= rotation_step; break;
+            case SDLK_S:      pitch_angle += rotation_step; break;
+            case SDLK_A:      theta       -= rotation_step; break;
+            case SDLK_D:      theta       += rotation_step; break;
+            case SDLK_R:
                 if (!free_rotate) {
-                  free_theta   = theta;
-                  free_rotate  = true;
+                free_theta   = theta;
+                free_rotate  = true;
                 } else {
-                  theta       = free_theta;
-                  pitch_angle = free_theta;
-                  free_rotate = false;
+                theta       = free_theta;
+                pitch_angle = free_theta;
+                free_rotate = false;
                 }
                 break;
             }
+
+            // cameraFront = glm::normalize(objectCenter - cameraPos);
         }
     }
 
@@ -219,11 +276,11 @@ void Renderer2D::UserUpdate()
                                 glm::vec3(0.0f, 0.0f, translate));
     glm::mat4 RX, RZ;
     if (!free_rotate) {
-      RX = glm::rotate(glm::mat4(1.0f), pitch_angle, glm::vec3(1,0,0));
-      RZ = glm::rotate(glm::mat4(1.0f), theta,       glm::vec3(0,0,1));
+    RX = glm::rotate(glm::mat4(1.0f), pitch_angle, glm::vec3(1,0,0));
+    RZ = glm::rotate(glm::mat4(1.0f), theta,       glm::vec3(0,0,1));
     } else {
-      RX = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(1,0,0));
-      RZ = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(0,0,1));
+    RX = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(1,0,0));
+    RZ = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(0,0,1));
     }
 
     drawObj(applyRenderMatrix(T * RX * RZ, obj));
@@ -509,7 +566,7 @@ void Renderer2D::fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2
     vertices.push_back(std::make_pair(x3, y3));
 
     std::sort(vertices.begin(), vertices.end(), [](const std::pair<uint16_t, uint16_t> a, const std::pair<uint16_t, uint16_t> b)
-              { return (a.second < b.second) || (a.second == b.second && a.first < b.first); });
+            { return (a.second < b.second) || (a.second == b.second && a.first < b.first); });
 
     std::pair<uint16_t, uint16_t> v0 = vertices[0];
     std::pair<uint16_t, uint16_t> v1 = vertices[1];
@@ -609,12 +666,12 @@ mesh Renderer2D::loadObj(std::string path)
     }
 
     std::cout << "Loaded triangles: " << obj.tris.size()
-              << (needGenerateUV ? " (UV generated spherically)\n"
-                                 : " (UV loaded from file)\n");
+            << (needGenerateUV ? " (UV generated spherically)\n"
+                                : " (UV loaded from file)\n");
 
+    // glm::vec3 objectCenter = computeObjectCenter(obj);
     return obj;
 }
-
 
 
 // .obj drawing
@@ -638,11 +695,28 @@ void Renderer2D::simpleRender(mesh meshObj)
 
     triangle triProjected;
 
+    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, translate));
+
+    glm::mat4 RX, RZ;
+    if (!free_rotate) {
+        RX = glm::rotate(glm::mat4(1.0f), pitch_angle, glm::vec3(1, 0, 0));
+        RZ = glm::rotate(glm::mat4(1.0f), theta,       glm::vec3(0, 0, 1));
+    } else {
+        RX = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(1, 0, 0));
+        RZ = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(0, 0, 1));
+    }
+
+    glm::mat4 model = T * RX * RZ;
+    glm::mat4 mvp = proj * view * model; 
+
+    mesh transformedMesh = applyRenderMatrix(mvp, meshObj);
+
     // glm::mat4 transl = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
 
     // mesh newMesh = applyRenderMatrix(transl * rotX * rotZ, meshObj);
 
-    for (auto triTranslated : meshObj.tris)
+    for (auto triTranslated : transformedMesh.tris)
     {
 
         // Calculating the normals in order to display the visible triangles
@@ -659,6 +733,11 @@ void Renderer2D::simpleRender(mesh meshObj)
         normal.y = line1.z * line2.x - line1.x * line2.z;
         normal.z = line1.x * line2.y - line1.y * line2.x;
 
+        glm::vec3 toCamera = -glm::vec3(triTranslated.p[0]);
+        if (glm::dot(normal, toCamera) < 0.0f) {
+            continue;
+        }
+
         float l = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
         normal.x /= l;
         normal.y /= l;
@@ -669,9 +748,9 @@ void Renderer2D::simpleRender(mesh meshObj)
         {
 
             for (int i = 0; i < 3; ++i) {
-    triProjected.p[i] = proj * triTranslated.p[i];
-    triProjected.t[i] = triTranslated.t[i];   //  ▲▲▲  păstrează UV-ul
-}
+                triProjected.p[i] = proj * triTranslated.p[i];
+                triProjected.t[i] = triTranslated.t[i];   //  ▲▲▲  păstrează UV-ul
+            }
 
 
             for (int i = 0; i < 3; i++)
@@ -702,10 +781,10 @@ void Renderer2D::simpleRender(mesh meshObj)
 
     // Sorting triagles for correct drawing order
     sort(tria.begin(), tria.end(), [](triangle &t1, triangle &t2)
-         {
-			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
-			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
-			return z1 > z2; });
+        {
+            float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
+            float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
+            return z1 > z2; });
 
     // Drawing
     for (const auto &triToRaster : tria)
@@ -722,24 +801,24 @@ void Renderer2D::simpleRender(mesh meshObj)
                 static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
                 static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
                 static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                RGBA(60, 60, 60, 120));
-   
+                RGBA(0, 255, 0, 255));
+
         if (mode == RenderMode::TEXTURED || mode == RenderMode::TEXTURED_WIREFRAME)
             {
                 fillTexturedTri(triToRaster, currentTex ? currentTex : meshObj.texture);
             }
-         if (mode == RenderMode::SHADED_WIREFRAME || mode == RenderMode::WIREFRAME || mode == RenderMode::TEXTURED_WIREFRAME)
+        if (mode == RenderMode::SHADED_WIREFRAME || mode == RenderMode::WIREFRAME || mode == RenderMode::TEXTURED_WIREFRAME)
         {
             // Draw wireframe
             drawLine(static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-                     static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y), RGBA(120, 120, 120, 100));
+                    static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y), RGBA(0, 255, 0, 255));
             drawLine(static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-                     static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y), RGBA(120, 120, 120, 100));
+                    static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y), RGBA(0, 255, 0, 255));
             drawLine(static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                     static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y), RGBA(120, 120, 120, 100));
+                    static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y), RGBA(0, 255, 0, 255));
         }
 
-   }
+}
 }
 
 void Renderer2D::drawCube()
@@ -781,7 +860,8 @@ void Renderer2D::gpuRender(const mesh &newObj)
     float time = SDL_GetTicks() * 0.001f;
 
     // 1) Construim matricile View / Projection
-    glm::mat4 viewMat = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -5));
+    glm::mat4 viewMat = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    
     glm::mat4 projMat = glm::perspective(
         glm::radians(60.0f),
         float(windowWidth) / float(windowHeight),
@@ -879,7 +959,7 @@ void Renderer2D::gpuRender(const mesh &newObj)
 /* idem u1/v1 şi u2/v2 */
         ct.u1 = std::fmod(triCPU.t[1].x, 1.0f);  if (ct.u1 < 0) ct.u1 += 1.0f;
         ct.v1 = std::fmod(triCPU.t[1].y, 1.0f);  if (ct.v1 < 0) ct.v1 += 1.0f;
-      ct.u2 = std::fmod(triCPU.t[2].x, 1.0f);  if (ct.u2 < 0) ct.u2 += 1.0f;
+    ct.u2 = std::fmod(triCPU.t[2].x, 1.0f);  if (ct.u2 < 0) ct.u2 += 1.0f;
         ct.v2 = std::fmod(triCPU.t[2].y, 1.0f);  if (ct.v2 < 0) ct.v2 += 1.0f;
 
         cudaTris.push_back(ct);
@@ -1006,7 +1086,7 @@ bool mesh::LoadFromObjectFile(const std::string& sFilename)
             if (!(ss >> v.x >> v.y >> v.z))
             {
                 std::cerr << "WARNING: Line " << line_number
-                          << ": Malformed vertex data.\n";
+                        << ": Malformed vertex data.\n";
                 load_error = true;
                 continue;
             }
@@ -1020,7 +1100,7 @@ bool mesh::LoadFromObjectFile(const std::string& sFilename)
             if (!(ss >> vt.x >> vt.y))
             {
                 std::cerr << "WARNING: Line " << line_number
-                          << ": Malformed texture coordinate data.\n";
+                        << ": Malformed texture coordinate data.\n";
                 load_error = true;
                 continue;
             }
@@ -1033,7 +1113,7 @@ bool mesh::LoadFromObjectFile(const std::string& sFilename)
             if (!(ss >> vn.x >> vn.y >> vn.z))
             {
                 std::cerr << "WARNING: Line " << line_number
-                          << ": Malformed normal data.\n";
+                        << ": Malformed normal data.\n";
                 load_error = true;
                 continue;
             }
@@ -1078,7 +1158,7 @@ bool mesh::LoadFromObjectFile(const std::string& sFilename)
                         catch (const std::exception&)
                         {
                             std::cerr << "WARNING: Line " << line_number
-                                      << ": Invalid index in face chunk '" << face_chunk_str << "'\n";
+                                    << ": Invalid index in face chunk '" << face_chunk_str << "'\n";
                             face_parse_error = true;
                             break;
                         }
@@ -1091,7 +1171,7 @@ bool mesh::LoadFromObjectFile(const std::string& sFilename)
                 if (idx.v == 0)
                 {
                     std::cerr << "WARNING: Line " << line_number
-                              << ": Face vertex without position index.\n";
+                            << ": Face vertex without position index.\n";
                     face_parse_error = true;
                     break;
                 }
@@ -1105,7 +1185,7 @@ bool mesh::LoadFromObjectFile(const std::string& sFilename)
             if (face_indices.size() < 3)
             {
                 std::cerr << "WARNING: Line " << line_number
-                          << ": Face with less than 3 vertices.\n";
+                        << ": Face with less than 3 vertices.\n";
                 load_error = true;
                 continue;
             }
@@ -1126,7 +1206,7 @@ bool mesh::LoadFromObjectFile(const std::string& sFilename)
                 if (!validPos(idx0) || !validPos(idx1) || !validPos(idx2))
                 {
                     std::cerr << "ERROR: Line " << line_number
-                              << ": Vertex index out of range during triangulation.\n";
+                            << ": Vertex index out of range during triangulation.\n";
                     load_error = true;
                     break;
                 }
@@ -1160,14 +1240,14 @@ bool mesh::LoadFromObjectFile(const std::string& sFilename)
     /* --------- Mesaje finale de status ----------------------------------- */
     if (load_error)
         std::cerr << "NOTE: Warnings or errors occurred during OBJ load of '"
-                  << sFilename << "'.\n";
+                << sFilename << "'.\n";
 
     if (tris.empty())
         std::cerr << "WARNING: No triangles produced while loading '"
-                  << sFilename << "'.\n";
+                << sFilename << "'.\n";
 
     std::cout << "Finished loading '" << sFilename
-              << "'. Triangles loaded: " << tris.size() << '\n';
+            << "'. Triangles loaded: " << tris.size() << '\n';
     return !tris.empty();   // true doar dacă avem ceva de randat
 }
 
@@ -1372,16 +1452,16 @@ void Renderer2D::fillTexturedTri(const triangle& tri, const Texture* tex)
 
         // --- 4) perspective-correct UV -----------------------------
         // --- 4) perspective-correct UV ----------------------------------
-float invW = w0*w0Inv + w1*w1Inv + w2*w2Inv;
-float u = (w0*uv0.x + w1*uv1.x + w2*uv2.x) / invW;
-float v = (w0*uv0.y + w1*uv1.y + w2*uv2.y) / invW;
+    float invW = w0*w0Inv + w1*w1Inv + w2*w2Inv;
+    float u = (w0*uv0.x + w1*uv1.x + w2*uv2.x) / invW;
+    float v = (w0*uv0.y + w1*uv1.y + w2*uv2.y) / invW;
 
-/*  ▲  adaugă aici 1 linie  */
-u -= std::floor(u);         // repeat pe orizontală
-v -= std::floor(v);         // repeat pe verticală
+    /*  ▲  adaugă aici 1 linie  */
+    u -= std::floor(u);         // repeat pe orizontală
+    v -= std::floor(v);         // repeat pe verticală
 
-int tx = int(u * tex->w) & (tex->w - 1);           // repeat (funcţionează pt. texturi POT)
-int ty = int((1.0f - v) * tex->h) & (tex->h - 1);  // idem
+    int tx = int(u * tex->w) & (tex->w - 1);           // repeat (funcţionează pt. texturi POT)
+    int ty = int((1.0f - v) * tex->h) & (tex->h - 1);  // idem
 
 
 
