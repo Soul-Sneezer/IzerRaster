@@ -2,6 +2,8 @@
 #include <pybind11/pybind11.h>  
 #include <pybind11/stl.h> 
 #include "renderer2D.hpp"
+#include <texture.hpp>
+
 
 namespace py = pybind11;
 
@@ -10,10 +12,13 @@ class PyRenderer2D : public Renderer2D
     public:
         using Renderer2D::Renderer2D;
 
-        void UserUpdate() override 
-        {
-            PYBIND11_OVERRIDE(void, Renderer2D, UserUpdate);
-        }
+      void UserUpdate() override {
+        // Always call the Python override if it exists (handles input, transformations, etc.)
+        PYBIND11_OVERRIDE(void, Renderer2D, UserUpdate);
+        // Then call base class implementation to perform rendering (GPU or CPU drawing)
+        
+            Renderer2D::UserUpdate();  // run CUDA pipeline for GPU mode
+    }
 };
 
 PYBIND11_MODULE(IzerRaster, m)
@@ -93,6 +98,7 @@ PYBIND11_MODULE(IzerRaster, m)
     m.attr("KEY_Y") = SDLK_Y;
     m.attr("KEY_Z") = SDLK_Z;
 
+    
     py::class_<glm::vec3>(m, "vec3")
            .def(py::init<float, float, float>())
            .def_readwrite("x", &glm::vec3::x)
@@ -190,22 +196,31 @@ PYBIND11_MODULE(IzerRaster, m)
     py::class_<mesh>(m, "Mesh")
            .def("LoadFromObjectFile", &mesh::LoadFromObjectFile);
 
-    py::enum_<RenderMode>(m, "RenderMode")
-        .value("WIREFRAME", RenderMode::WIREFRAME)
-        .value("SHADED", RenderMode::SHADED)
-        .value("SHADED_WIREFRAME", RenderMode::SHADED_WIREFRAME);
 
+        /* ==================== Texture ====================== */
+/*  Py nu va elibera obiectul (deținut de Renderer2D)  */
+py::class_<Texture, std::unique_ptr<Texture, py::nodelete>>(m, "Texture")
+    .def_property_readonly("width",  [](const Texture &t) { return t.w; })
+    .def_property_readonly("height", [](const Texture &t) { return t.h; });
+
+py::enum_<RenderMode>(m, "RenderMode")
+        .value("WIREFRAME", RenderMode::WIREFRAME)
+        .value("SHADED",    RenderMode::SHADED)
+        .value("SHADED_WIREFRAME", RenderMode::SHADED_WIREFRAME)
+        .value("TEXTURED", RenderMode::TEXTURED)
+        .value("TEXTURED_WIREFRAME", RenderMode::TEXTURED_WIREFRAME);
     py::class_<Renderer2D, PyRenderer2D>(m, "Renderer2D")
         .def(py::init<const std::string&, uint16_t, uint16_t>(),
-                py::arg("appName") = "Renderer2D",
-                py::arg("width") = 640,
-                py::arg("height") = 480)
+             py::arg("appName") = "Renderer2D",
+             py::arg("width") = 640,
+             py::arg("height") = 480)
         .def("Init", &Renderer2D::Init)
-        .def("Run", &Renderer2D::Run)
+        .def("Run", &Renderer2D::Run, py::call_guard<py::gil_scoped_release>())
         .def("Quit", &Renderer2D::Quit)
         .def("clearScreen", &Renderer2D::clearScreen)
-        .def("drawPoint", py::overload_cast<uint16_t, uint16_t, RGBA>(&Renderer2D::drawPoint), py::arg("x"), py::arg("y"), py::arg("rgba_struct"))
-        .def("drawLine", &Renderer2D::drawLine, py::arg("x1"), py::arg("y1"), py::arg("x2"), py::arg("y2"), py::arg("rgba"))
+        .def("drawPoint", py::overload_cast<uint16_t, uint16_t, RGBA>(&Renderer2D::drawPoint),
+             py::arg("x"), py::arg("y"), py::arg("rgba_struct"))
+        .def("drawLine", &Renderer2D::drawLine)
         .def("drawRect", &Renderer2D::drawRect)
         .def("fillRect", &Renderer2D::fillRect)
         .def("drawCircle", &Renderer2D::drawCircle)
@@ -213,12 +228,14 @@ PYBIND11_MODULE(IzerRaster, m)
         .def("drawTriangle", &Renderer2D::drawTriangle)
         .def("fillTriangle", &Renderer2D::fillTriangle)
         .def("drawCube", &Renderer2D::drawCube)
-        .def("loadObj", &Renderer2D::loadObj,py::arg("filename"))
+        .def("loadObj", &Renderer2D::loadObj, py::arg("filename"))
         .def("drawObj", &Renderer2D::drawObj)
         .def("getCurrentTime", &Renderer2D::GetCurrentTime)
         .def("getDeltaTime", &Renderer2D::GetDeltaTime)
         .def("applyRenderMatrix", &Renderer2D::applyRenderMatrix)
         .def("poolInputEvents", &Renderer2D::poolInputEvents)
         .def("detectInputEvent", &Renderer2D::detectInputEvent)
+        .def("loadTexture", &Renderer2D::loadTexture,py::return_value_policy::reference)   // NU transferă ownership
+        .def("setTexture",  &Renderer2D::setTexture)
         .def_readwrite("renderMode", &Renderer2D::mode);
 }
