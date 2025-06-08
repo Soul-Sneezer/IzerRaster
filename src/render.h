@@ -42,7 +42,7 @@ void uploadTexture(const uint32_t* devPixels, int w, int h);
 void setTexturing(bool enable);
 
 
-void uploadLighting(const Light& light, const glm::vec3& camPos, const Material& material);
+// void uploadLighting(const Light& light, const glm::vec3& camPos, const Material& material);
 
 
 /**

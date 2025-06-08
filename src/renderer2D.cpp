@@ -157,11 +157,11 @@ void Renderer2D::Run()
         float deltaTime = GetDeltaTime();
         Renderer2D::lastTime = GetCurrentTime();
     
-        uploadLighting(
-                 Light{light.position},
-                 cameraPos,
-                 Material{mat.diffuseColour, mat.specularColour, mat.shininess}
-        );        
+        // uploadLighting(
+        //          Light{light.position},
+        //          cameraPos,
+        //          Material{mat.diffuseColour, mat.specularColour, mat.shininess}
+        // );        
     
         // Render one frame (input handled inside Render/UserUpdate)
         Render();
