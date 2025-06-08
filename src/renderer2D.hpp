@@ -103,6 +103,8 @@ private:
     bool firstMouse = true;
     int lastMouseX = 0, lastMouseY = 0;
 
+    bool noCUDA;
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* screenTexture = nullptr;
@@ -186,4 +188,5 @@ public:
     Texture* loadTexture(const std::string& path);
     void     setTexture(Texture* t);
     void fillTexturedTri(const triangle& tri, const Texture* tex);
+    void setCUDA(bool enable);
 };

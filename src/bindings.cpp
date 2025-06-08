@@ -237,5 +237,6 @@ py::enum_<RenderMode>(m, "RenderMode")
         .def("detectInputEvent", &Renderer2D::detectInputEvent)
         .def("loadTexture", &Renderer2D::loadTexture,py::return_value_policy::reference)   // NU transferă ownership
         .def("setTexture",  &Renderer2D::setTexture)
+        .def("setCUDA", &Renderer2D::setCUDA)
         .def_readwrite("renderMode", &Renderer2D::mode);
 }

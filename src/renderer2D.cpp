@@ -30,6 +30,10 @@ Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t heigh
 {
 }
 
+void Renderer2D::setCUDA(bool enable) {
+    noCUDA = enable;
+}
+
 void Renderer2D::Init()
 {
     SDL_SetAppMetadata(appName.c_str(), "1.0", "renderer");
@@ -37,7 +41,7 @@ void Renderer2D::Init()
     int deviceCount = 0;
     cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
 
-    if (cudaStatus == cudaSuccess && deviceCount > 0) {
+    if (cudaStatus == cudaSuccess && deviceCount > 0 && !noCUDA) {
         std::cout << "CUDA device(s) found: " << deviceCount << ". Using GPU mode.\n";
         this->useGPU = true;
     } else {

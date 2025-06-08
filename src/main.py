@@ -91,6 +91,7 @@ class GuiApp(tk.Tk):
             # Dimensiunea ferestrei SDL (poți ajusta după plac)
             width, height = 1280, 720
             renderer = CustomRenderer("IzerRaster Window", width, height, self.obj_path, self.tex_path)
+            renderer.setCUDA(False)
             renderer.Init()
 
             ok = renderer.loadObj(self.obj_path)
@@ -127,6 +128,7 @@ class CustomRenderer(IzerRaster.Renderer2D):
         self.translate = 8.0
         self.move_step = 0.5
         self.rotation_step = 0.05
+        # self.noCUDA = False
 
 if __name__ == "__main__":
     app = GuiApp()
