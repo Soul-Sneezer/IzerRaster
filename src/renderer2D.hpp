@@ -8,7 +8,6 @@
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_events.h> 
 #include <SDL3/SDL_keycode.h> 
-#include <SDL3_ttf/SDL_ttf.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtx/transform.hpp>
@@ -92,8 +91,6 @@ private:
     float theta;
     glm::vec4 cameraPos;
 
-       
-    TTF_Font* font; 
     uint32_t frameCount = 0;            // Frames since last FPS update
     uint32_t fps = 0;                   // Current FPS value
     char fpsString[32] = "FPS: 0";

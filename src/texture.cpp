@@ -1,12 +1,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "texture.hpp"
-#include <cuda_runtime.h>
+#ifdef HAS_CUDA
+    #include <cuda_runtime.h>
+#endif
 #include <stdexcept>
 #include <cstring> // for std::memcpy
 #include <iostream> // for std::cerr
 
 
+#ifdef HAS_CUDA
 Texture::Texture(const std::string& filename)
 {
     int nChannels;
@@ -29,3 +32,4 @@ Texture::~Texture()
     if (device)
         cudaFree(device);
 }
+#endif

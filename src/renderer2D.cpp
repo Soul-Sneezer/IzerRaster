@@ -1,16 +1,18 @@
 #define SDL_MAIN_HANDLED
 #include "renderer2D.hpp"
-#include "render.h" // CUDA rasterizer declarations (initCuda, renderFrame, cleanupCuda)
+#ifdef HAS_CUDA
+    #include "render.h" // CUDA rasterizer declarations (initCuda, renderFrame, cleanupCuda)
+    #include <cuda_runtime.h>
+    #incldue "texture.hpp"
+    #include "render.h"        // pentru uploadTexture()
+#endif
 #include <iostream>
 #include <algorithm>
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <cuda_runtime.h>
 #include <cmath>
 #include <cstdlib>
-#include "texture.hpp"
-#include "render.h"        // pentru uploadTexture()
 
 
 uint64_t Renderer2D::lastTime = 0;
@@ -24,6 +26,7 @@ void Renderer2D::Init()
     SDL_SetAppMetadata(appName.c_str(), "1.0", "renderer");
 
     int deviceCount = 0;
+#ifdef HAS_CUDA
     cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
     if (cudaStatus == cudaSuccess && deviceCount > 0) {
         std::cout << "CUDA device(s) found: " << deviceCount << ". Using GPU mode.\n";
@@ -32,26 +35,17 @@ void Renderer2D::Init()
         std::cout << "No CUDA devices found. Falling back to CPU mode.\n";
         this->useGPU = false;
     }
-
+#endif
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
         return;
     }
 
-    /*
-    if (!TTF_Init())
-    {
-        std::cerr << "SDL_ttf could not initialize!"<< std::endl;
-        SDL_Quit();
-        return;
-    }
-    */
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
     if (!SDL_CreateWindowAndRenderer(appName.c_str(), windowWidth, windowHeight, 0, &window, &renderer))
     {
         std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
-        // TTF_Quit();
         SDL_Quit();
 
         return;
@@ -67,7 +61,6 @@ void Renderer2D::Init()
         std::cerr << "Screen texture could not be created! SDL Error: " << SDL_GetError() << std::endl;
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
-        // TTF_Quit();
         SDL_Quit();
 
         return;
@@ -76,8 +69,6 @@ void Renderer2D::Init()
     this->screenBuffer.resize(windowWidth * windowHeight);
     depthBufferCPU.resize(windowWidth * windowHeight, 1e9f); // iniţial infinit
 
-
-    // font = TTF_OpenFont("arial.ttf", 24);
 
     // for triangle projections and geometry
     float fNear = 0.1f;
@@ -93,6 +84,7 @@ void Renderer2D::Init()
 
     this->mode = RenderMode::TEXTURED_WIREFRAME; // default render mode
 
+#ifdef HAS_CUDA
     if (useGPU)
     {
         if (!initCuda(windowWidth, windowHeight))
@@ -107,7 +99,7 @@ void Renderer2D::Init()
         cudaDepthBuffer = (float *)std::malloc(windowWidth * windowHeight * sizeof(float));
 
     }
-
+#endif
      perfFreq = SDL_GetPerformanceFrequency();
     lastPerfCounter = SDL_GetPerformanceCounter();
 }
@@ -218,6 +210,7 @@ void Renderer2D::Quit()
         return;
     }
 
+#ifdef HAS_CUDA
     if (useGPU)
     {
         if (cudaPixelBuffer)
@@ -232,7 +225,7 @@ void Renderer2D::Quit()
         }
         cleanupCuda();
     }
-
+#endif
     if (renderer)
     {
         SDL_DestroyRenderer(renderer);
@@ -243,9 +236,6 @@ void Renderer2D::Quit()
         SDL_DestroyWindow(window);
         window = nullptr;
     }
-
-    // TTF_CloseFont(font);
-    // TTF_Quit();
 
     SDL_Quit();
 
@@ -529,12 +519,14 @@ mesh Renderer2D::applyRenderMatrix(glm::mat4 mat, mesh objMesh)
 {
     mesh newMesh;
 
+#ifdef HAS_CUDA
     if (useGPU)
     {
 
         currentTransform = mat;
         return objMesh;
     }
+#endif
     for (const auto& tri : objMesh.tris) {
     triangle nt;
     nt.p[0] = mat * tri.p[0];
@@ -603,6 +595,7 @@ mesh Renderer2D::loadObj(std::string path)
 void Renderer2D::drawObj(mesh obj)
 {
     currentMesh = const_cast<mesh*>(&obj); // set the current mesh to the one being drawn
+#ifdef HAS_CUDA
     if (useGPU)
     {
         gpuRender(obj);
@@ -611,6 +604,10 @@ void Renderer2D::drawObj(mesh obj)
     {
         simpleRender(obj);
     }
+#else 
+    simpleRender(obj);
+#endif 
+
 }
 
 // mesh randering
@@ -705,11 +702,13 @@ void Renderer2D::simpleRender(mesh meshObj)
                 static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
                 static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
                 RGBA(100, 100, 100, 200));
-   
+  
+#ifdef HAS_CUDA 
         if (mode == RenderMode::TEXTURED || mode == RenderMode::TEXTURED_WIREFRAME)
             {
                 fillTexturedTri(triToRaster, currentTex ? currentTex : meshObj.texture);
             }
+#endif
          if (mode == RenderMode::SHADED_WIREFRAME || mode == RenderMode::WIREFRAME || mode == RenderMode::TEXTURED_WIREFRAME)
         {
             // Draw wireframe
@@ -750,7 +749,7 @@ void Renderer2D::drawCube()
 }
 
 
-
+#ifdef HAS_CUDA
 void Renderer2D::gpuRender(const mesh &newObj)
 {
     if (newObj.tris.empty())
@@ -941,7 +940,7 @@ void Renderer2D::gpuRender(const mesh &newObj)
         screenBuffer[cy * windowWidth + cx] = RGBA(255, 0, 0, 255);
     }
 }
-
+#endif
 // OBJ loading cu suport complet pentru UV-uri (vt) şi, opcional, normale (vn)
 bool mesh::LoadFromObjectFile(const std::string& sFilename)
 {
@@ -1265,6 +1264,7 @@ std::vector<InputEvent> Renderer2D::poolInputEvents()
 
     return events;
 }
+#ifdef HAS_CUDA
 // TEXTURĂ: încarcă din disc + upload pe GPU                            
 Texture* Renderer2D::loadTexture(const std::string& path)
 {
@@ -1277,14 +1277,16 @@ Texture* Renderer2D::loadTexture(const std::string& path)
         setTexturing(false);
         std::cerr << "[WARN] CPU path încă nu e implementat pentru sampling!\n";
     }
-
+    setTexturing(false);
+    std::cerr<<"[WARN] CPU path inca nu e implementat pentru sampling!\n";
     if (currentMesh)                            // ③ leagă de mesh curent
         currentMesh->texture = currentTex;
 
     return currentTex;                          // ownership rămâne în C++
 }
+#endif
 
-
+#ifdef HAS_CUDA
 void Renderer2D::setTexture(Texture* t)
 {
     currentTex = t;
@@ -1292,8 +1294,7 @@ void Renderer2D::setTexture(Texture* t)
         uploadTexture(t->device, t->w, t->h);
         setTexturing(true);   
 }
-
-
+#endif
 
 static uint32_t sampleCPU(const Texture* tex, float u, float v)
 {
@@ -1308,6 +1309,8 @@ static uint32_t sampleCPU(const Texture* tex, float u, float v)
 
     return tex->pixels[y * tex->w + x];
 }
+
+#ifdef HAS_CUDA
 void Renderer2D::fillTexturedTri(const triangle& tri, const Texture* tex)
 {
     if (!tex) return;
@@ -1375,3 +1378,4 @@ int ty = int((1.0f - v) * tex->h) & (tex->h - 1);  // idem
         depthBufferCPU[idx]   = z;
     }
 }
+#endif
