@@ -1,0 +1,185 @@
+name: 'Configure CMake'
+description: 'Common logic for CMake configuration'
+
+inputs:
+  warnings_as_errors:
+    description: 'Treat warnings as errors'
+    required: false
+    default: 'OFF'
+  custom_flags:
+    description: 'Custom CMake configuration flags'
+    required: false
+  compiler: 
+    description: 'Compiler to use (msvc or mingw)'
+    required: false
+    default: 'msvc'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install vcpkg
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git
+        cd vcpkg
+        ./bootstrap-vcpkg.bat
+        ./vcpkg integrate install
+        echo "VCPKG_ROOT=$env:GITHUB_WORKSPACE\vcpkg" >> $env:GITHUB_ENV
+
+    - name: Install GLM (Windows)
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        $vcpkg = Join-Path $env:VCPKG_ROOT "vcpkg.exe"
+        $triplet = if ("${{ inputs.compiler }}" -eq "mingw") { "x64-mingw-dynamic" } else { "x64-windows" }
+        & $vcpkg install glm:$triplet
+        
+        # Debug: Show GLM installation paths
+        $glmPath = Join-Path $env:VCPKG_ROOT "installed\x64-windows"
+        Write-Host "GLM installation path: $glmPath"
+        ls $glmPath\include\glm
+        
+        # Export GLM paths for CMake
+        echo "GLM_DIR=$glmPath" >> $env:GITHUB_ENV
+        echo "GLM_ROOT_DIR=$glmPath" >> $env:GITHUB_ENV
+
+    # Cache SDL3 install directory
+    - name: Cache SDL3 install
+      uses: actions/cache@v4
+      id: cache-sdl3
+      with:
+        path: sdl3-install
+        key: ${{ runner.os }}-sdl3-${{ hashFiles('**/CMakeLists.txt') }}
+
+    - name: Install SDL3 (Windows)
+      if: runner.os == 'Windows' && steps.cache-sdl3.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        git clone https://github.com/libsdl-org/SDL.git -b main SDL3
+        cd SDL3
+
+        cmake -B build `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DSDL_TEST=OFF `
+          -DBUILD_SHARED_LIBS=ON `
+          -DSDL_WINDOWS_GAMING_INPUT=OFF `
+          -DSDL_WINDOWS=ON `
+          -DSDL_DIRECTX=ON `
+          -DSDL_XINPUT=OFF `
+          -DSDL_JOYSTICK=OFF `
+          -DSDL_GAMECONTROLLER=OFF `
+          -DSDL_HAPTIC=OFF `
+          -DSDL_HIDAPI=ON `
+          -DHAVE_GAMEINPUT_H=0 `
+          -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE/sdl3-install" 
+        cmake --build build --config Release --parallel 4
+        cmake --install build
+
+    # Install SDL3 if not cached
+    - name: Install SDL3 (Linux)
+      shell: bash
+      if: runner.os == 'Linux' && steps.cache-sdl3.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/libsdl-org/SDL.git -b main SDL3
+        cd SDL3
+        mkdir build && cd build
+        if [[ "${{ matrix.cmake_generator }}" == "Ninja" ]]; then
+          cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON
+          ninja
+          ninja install
+        else
+          cmake .. -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/sdl3-install -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON
+          cmake --build . -j$(nproc)
+          cmake --install .
+        fi
+
+    # Cache CMake dependencies
+    - name: Cache deps
+      uses: actions/cache@v4
+      id: cache-deps
+      with:
+        path: |
+          ${{ env.BUILD_DIR }}/_deps
+        key: cache-${{ matrix.cmake_generator }}-${{ matrix.os }}-${{ matrix.cxx }}-${{ env.BUILD_TYPE }}-${{ env.SFML_VERSION }}
+
+    # Cache Ninja dependencies
+    - name: Cache Ninja deps
+      uses: actions/cache@v4
+      if: matrix.cmake_generator == 'Ninja'
+      id: cache-deps-ninja
+      with:
+        path: |
+          ${{ env.BUILD_DIR }}/.ninja_deps
+          ${{ env.BUILD_DIR }}/.ninja_log
+        key: ${{ matrix.os }}-${{ matrix.cxx }}-ninja-cache-${{ hashFiles('CMakeLists.txt') }}
+        restore-keys: ${{ matrix.os }}-${{ matrix.cxx }}-ninja-cache-
+
+    # Cache MinGW toolchain
+    - name: Cache MinGW
+      uses: actions/cache@v4
+      id: cache-mingw
+      if: runner.os == 'Windows' && matrix.cxx == 'g++'
+      with:
+        path: gcc
+        key: ${{ runner.os }}-${{ env.MINGW_CACHE_KEY }}
+
+    # Download MinGW toolchain (if not cached)
+    - name: Download toolchain (MinGW)
+      uses: suisei-cn/actions-download-file@v1.4.0
+      id: download-mingw-gcc
+      if: runner.os == 'Windows' && matrix.cxx == 'g++' && steps.cache-mingw.outputs.cache-hit != 'true'
+      with:
+        url: "https://github.com/brechtsanders/winlibs_mingw/releases/download/${{ env.MINGW_VER }}"
+        target: compiler/
+
+    # Install MinGW toolchain
+    - name: Install toolchain (MinGW)
+      shell: bash
+      if: runner.os == 'Windows' && matrix.cxx == 'g++' && steps.cache-mingw.outputs.cache-hit != 'true'
+      run: |
+        7z x compiler/${{ steps.download-mingw-gcc.outputs.filename }} -ogcc
+
+    # Install GLM based on platform
+    - name: Install GLM (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libglm-dev
+
+    - name: Install GLM (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew update
+        brew install glm
+ 
+    - name: Configure CMake (MinGW)
+      shell: bash
+      if: runner.os == 'Windows' && matrix.cxx == 'g++'
+      run: |
+        PATH="$(pwd)/gcc/mingw64/bin:${PATH}"
+        CMAKE_GENERATOR=${{ matrix.cmake_generator }} cmake -S ${GITHUB_WORKSPACE} -B ${{ env.BUILD_DIR }} \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/artifacts \
+          -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
+          -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
+          -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+          -DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic \
+          -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/sdl3-install" \
+          -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON \
+          ${{ inputs.custom_flags }}
+
+    - name: Configure CMake
+      shell: bash
+      if: ${{ !(runner.os == 'Windows' && matrix.cxx == 'g++') }}
+      run: |
+        CMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/sdl3-install" \
+        cmake -S ${GITHUB_WORKSPACE} -B ${{ env.BUILD_DIR }} \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/artifacts \
+          -DGITHUB_ACTIONS=${GITHUB_ACTIONS} \
+          -DWARNINGS_AS_ERRORS=${{ inputs.warnings_as_errors }} \
+          -DSDL_DISABLE_WINDOWS_GAMING_INPUT=ON \
+          ${{ inputs.custom_flags }}

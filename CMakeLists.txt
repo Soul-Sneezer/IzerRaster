@@ -1,6 +1,3 @@
-# CMakeLists.txt
-
-# Minimum CMake version required (adjust if needed, pybind11 might need newer)
 cmake_minimum_required(VERSION 3.15)
 
 # Project Name (should match the output module base name)
@@ -11,6 +8,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) # Prefer standard C++
 set(CMAKE_CUDA_ARCHITECTURES 86)
+
+# Set binary output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # --- Find Dependencies ---
 
@@ -51,11 +53,12 @@ message(STATUS "Using pybind11 (FetchContent): ${pybind11_INCLUDE_DIRS}")
 #    to point to the SDL installation directories (e.g., the root dir containing include/, lib/).
 #    Example: cmake .. -DCMAKE_PREFIX_PATH="/path/to/sdl3_install;/path/to/sdl3_ttf_install"
 find_package(SDL3 REQUIRED)
-find_package(SDL3_ttf REQUIRED)
+#find_package(SDL3_ttf REQUIRED)
 message(STATUS "Found SDL3 Library: ${SDL3_LIBRARIES} (Using Target: SDL3::SDL3)")
 message(STATUS "Found SDL3 Include Dirs: ${SDL3_INCLUDE_DIRS}")
-message(STATUS "Found SDL3_ttf Library: ${SDL3_TTF_LIBRARIES} (Using Target: SDL3_ttf::SDL3_ttf)")
-message(STATUS "Found SDL3_ttf Include Dirs: ${SDL3_TTF_INCLUDE_DIRS}")
+#message(STATUS "Found SDL3_ttf Library: ${SDL3_TTF_LIBRARIES} (Using Target: SDL3_ttf::SDL3_ttf)")
+#message(STATUS "Found SDL3_ttf Include Dirs: ${SDL3_TTF_INCLUDE_DIRS}")
+
 # --- Define the Python Module Target ---
 
 # Use pybind11's helper function to create the Python extension module.
@@ -84,7 +87,6 @@ set_target_properties(IzerRaster PROPERTIES
 target_link_libraries(IzerRaster PRIVATE
     pybind11::module # Link pybind11 core module support
     SDL3::SDL3       # Link SDL3 library (target name from SDL3's CMake config)
-    SDL3_ttf::SDL3_ttf # Link SDL3_ttf library (target name from SDL3_ttf's CMake config)
     CUDA::cudart
 )
 
@@ -93,13 +95,38 @@ target_include_directories(IzerRaster PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR} # Directory containing this CMakeLists.txt
 )
 
-find_path(GLM_INCLUDE_DIR glm/glm.hpp)
-if(NOT GLM_INCLUDE_DIR)
-  message(FATAL_ERROR "GLM not found!")
+# First try find_package
+find_package(GLM QUIET)
+
+# If find_package fails, try find_path as fallback
+if(NOT TARGET GLM::GLM)
+    find_path(GLM_INCLUDE_DIR glm/glm.hpp
+        PATHS 
+            ${CMAKE_PREFIX_PATH}/include
+            ${GLM_DIR}/include
+            ${GLM_ROOT_DIR}/include
+            $ENV{GLM_DIR}/include
+            $ENV{GLM_ROOT_DIR}/include
+            $ENV{VCPKG_ROOT}/installed/x64-windows/include
+    )
+    if(NOT GLM_INCLUDE_DIR)
+        message(FATAL_ERROR "GLM not found! Neither find_package nor find_path could locate GLM. Searched in: \n"
+            "  ${CMAKE_PREFIX_PATH}/include\n"
+            "  ${GLM_DIR}/include\n"
+            "  ${GLM_ROOT_DIR}/include\n"
+            "  $ENV{GLM_DIR}/include\n"
+            "  $ENV{GLM_ROOT_DIR}/include\n"
+            "  $ENV{VCPKG_ROOT}/installed/x64-windows/include")
+    endif()
+
+    # Create GLM::GLM target
+    add_library(GLM::GLM INTERFACE IMPORTED)
+    set_target_properties(GLM::GLM PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${GLM_INCLUDE_DIR}"
+    )
 endif()
 
-target_include_directories(IzerRaster PRIVATE ${GLM_INCLUDE_DIR})
-
+target_link_libraries(IzerRaster PRIVATE GLM::GLM)
 
 # --- Configure Build Options ---
 
@@ -121,15 +148,42 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the build type: Debug Release RelWithDebInfo MinSizeRel" FORCE)
 endif()
 
-# --- Optional: Installation ---
-# You can add installation rules here if you want to install the module system-wide
-# or into a specific location using `cmake --install`.
-# Example (adjust paths as needed):
-# include(GNUInstallDirs)
-# install(TARGETS IzerRaster
-#         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}/site-packages
-#         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} # For DLLs on Windows
-#         )
+# --- Installation Rules ---
+
+# Installation rules with conditional system-wide installation
+if(DEFINED ENV{CI})
+    # In CI environment, only install to local artifacts directory
+    install(TARGETS IzerRaster
+        LIBRARY DESTINATION "bin"
+        RUNTIME DESTINATION "bin"
+        ARCHIVE DESTINATION "bin"
+    )
+else()
+    # For local development, install both to artifacts and Python site-packages
+    execute_process(
+        COMMAND "${Python_EXECUTABLE}" -c "import site; print(site.getsitepackages()[0])"
+        OUTPUT_VARIABLE PYTHON_SITE_PACKAGES
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    install(TARGETS IzerRaster
+        LIBRARY DESTINATION "bin"
+        RUNTIME DESTINATION "bin"
+        ARCHIVE DESTINATION "bin"
+    )
+
+    # Only install to Python site-packages during local development
+    install(TARGETS IzerRaster
+        LIBRARY DESTINATION "${PYTHON_SITE_PACKAGES}"
+        RUNTIME DESTINATION "${PYTHON_SITE_PACKAGES}"
+    )
+endif()
+
+# On Windows, install required runtime DLLs
+if(WIN32)
+    install(FILES $<TARGET_RUNTIME_DLLS:IzerRaster>
+            DESTINATION "bin")
+endif()
 
 message(STATUS "Configuration complete. To build, run: cmake --build . --config <BuildType>")
 message(STATUS "Replace <BuildType> with Debug, Release, RelWithDebInfo, or MinSizeRel.")
