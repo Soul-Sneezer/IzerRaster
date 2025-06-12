@@ -85,7 +85,7 @@ void Renderer2D::Init()
     SDL_WarpMouseGlobal(centerX, centerY);
 
     //SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_CENTER, "1");
-    //SDL_SetWindowRelativeMouseMode(window, true);
+    SDL_SetWindowRelativeMouseMode(window, true);
 
     if (!SDL_SetRenderVSync(renderer, SDL_RENDERER_VSYNC_DISABLED)) {
     std::cerr << "SDL_SetRenderVSync failed: " << SDL_GetError() << "\n";
