@@ -28,6 +28,8 @@ uint64_t Renderer2D::lastTime = 0;
 
 Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t height) : appName(appName), windowWidth(width), windowHeight(height)
 {
+    static MyInputLogger logger;
+    addInputListener(&logger);
 }
 
 void Renderer2D::setCUDA(bool enable) {
@@ -207,6 +209,10 @@ void Renderer2D::UserUpdate()
 
     for (auto &ev : poolInputEvents())
     {
+        for (auto* listener : inputListeners) {
+            listener->onInputEvent(ev);
+        }
+
         if (ev.type == "MOUSEMOTION") {
             int mouseX = ev.mouseX;
             int mouseY = ev.mouseY;

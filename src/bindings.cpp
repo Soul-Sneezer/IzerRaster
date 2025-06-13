@@ -239,5 +239,9 @@ py::enum_<RenderMode>(m, "RenderMode")
         .def("loadTexture", &Renderer2D::loadTexture,py::return_value_policy::reference)   // NU transferă ownership
         .def("setTexture",  &Renderer2D::setTexture)
         .def("setCUDA", &Renderer2D::setCUDA)
-        .def_readwrite("renderMode", &Renderer2D::mode);
+        .def_readwrite("renderMode", &Renderer2D::mode)
+        .def_static("Instance", &Renderer2D::Instance, py::arg("appName") = "Renderer2D",
+                                                       py::arg("width") = 640, 
+                                                       py::arg("height") = 480,
+                                                       py::return_value_policy::reference);
 }

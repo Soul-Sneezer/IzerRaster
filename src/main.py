@@ -129,7 +129,7 @@ class GuiApp(tk.Tk):
         try:
             # Dimensiunea ferestrei SDL (poți ajusta după plac)
             width, height = 1280, 720
-            renderer = CustomRenderer("IzerRaster Window", width, height, model_path, self.tex_path, model_type)
+            renderer = IzerRaster.Renderer2D.Instance("IzerRaster Window", width , height)
             renderer.setCUDA(False)
             renderer.Init()
 
@@ -144,12 +144,13 @@ class GuiApp(tk.Tk):
                 tex = renderer.loadTexture(self.tex_path)
                 if tex is None:
                     print(f"Warning: Could not load texture: {self.tex_path}")
+                    renderer.renderMode = IzerRaster.RenderMode.TEXTURED_WIREFRAME
                 else:
                     renderer.setTexture(tex)
-                    renderer.mode = IzerRaster.RenderMode.TEXTURED_WIREFRAME
+                    renderer.renderMode = IzerRaster.RenderMode.TEXTURED_WIREFRAME
             else:
                 # No texture - use shaded wireframe mode
-                renderer.mode = IzerRaster.RenderMode.SHADED_WIREFRAME
+                renderer.renderMode = IzerRaster.RenderMode.SHADED_WIREFRAME
             
         except Exception as e:
             messagebox.showerror("Eroare la inițializare", str(e))

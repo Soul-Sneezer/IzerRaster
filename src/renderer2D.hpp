@@ -76,6 +76,19 @@ struct InputEvent
     int wheelX;
 };
 
+class InputEventListener {
+public:
+    virtual void onInputEvent(const InputEvent& event) = 0;
+    virtual ~InputEventListener() = default;
+};
+
+class MyInputLogger : public InputEventListener {
+public:
+    void onInputEvent(const InputEvent& event) override {
+        std::cout << "Received event: " << event.type << std::endl;
+    }
+};
+
 enum class RenderMode {
     WIREFRAME,              // doar muchii
     SHADED,                 // culori plane
@@ -130,6 +143,7 @@ private:
     int windowWidth;
     int windowHeight;
 
+
 std::vector<float> depthBufferCPU;   //  ← NOU!
               // deja există
 
@@ -146,6 +160,9 @@ std::vector<float> depthBufferCPU;   //  ← NOU!
     static uint64_t lastTime;
 
 
+    std::vector<InputEvent> inputEvents;
+    std::vector<InputEventListener*> inputListeners;
+
     void drawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2, RGBA rgba);
     void update(float deltaTime);
     void simpleRender(mesh meshObj);
@@ -159,6 +176,16 @@ protected:
      glm::mat4 currentTransform {1.0f};
 
 public:
+    static Renderer2D& Instance(const std::string& appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480) {
+        static Renderer2D instance(appName, width, height);
+        return instance;
+    }
+
+    Renderer2D(const Renderer2D&) = delete; 
+    Renderer2D& operator=(const Renderer2D&) = delete;
+    Renderer2D(Renderer2D&&) = delete;
+    Renderer2D& operator=(Renderer2D&&) = delete;
+
     RenderMode mode;
 
     Renderer2D(const std::string appName = "Renderer2D", uint16_t width = 640, uint16_t height = 480);
@@ -192,4 +219,12 @@ public:
     void setCUDA(bool enable);
     mesh loadStl(const std::string& path);
 
+
+    void addInputListener(InputEventListener* listener) {
+        inputListeners.push_back(listener);
+    }
+
+    void removeInputListener(InputEventListener* listener) {
+        inputListeners.erase(std::remove(inputListeners.begin(), inputListeners.end(), listener), inputListeners.end());
+    }
 };
