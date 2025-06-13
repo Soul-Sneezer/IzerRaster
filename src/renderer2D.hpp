@@ -183,8 +183,10 @@ public:
     void drawObj(mesh obj);
     std::vector<InputEvent> poolInputEvents();
     std::optional<InputEvent> detectInputEvent();
+#ifdef HAS_CUDA
     Texture* loadTexture(const std::string& path);
     void     setTexture(Texture* t);
+#endif
     void fillTexturedTri(const triangle& tri, const Texture* tex);
     void setCUDA(bool enable);
     mesh loadStl(const std::string& path);
