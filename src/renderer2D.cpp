@@ -16,15 +16,15 @@
 // pentru uploadTexture()
 
 Light light = {
-         .position = glm::vec3(0.0f, 10.0f, 10.0f), 
-         .colour = glm::vec3(1.0f, 1.0f, 1.0f),
-         .intensity = 1.0f
+         glm::vec3(0.0f, 10.0f, 10.0f), 
+         glm::vec3(1.0f, 1.0f, 1.0f),
+         1.0f
 };
 
 Material mat = {
-         .diffuseColour = glm::vec3(1.0f, 1.0f, 1.0f),
-         .specularColour = glm::vec3(1.0f, 1.0f, 1.0f),
-         .shininess = 32.0f
+         glm::vec3(1.0f, 1.0f, 1.0f),
+         glm::vec3(1.0f, 1.0f, 1.0f),
+         32.0f
 };
 
 uint64_t Renderer2D::lastTime = 0;
