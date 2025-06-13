@@ -22,6 +22,7 @@
 #include <iostream> 
 #include <optional>
 #include "texture.hpp"
+#include "stl_reader.h"
 
 struct Light 
 {
@@ -189,4 +190,6 @@ public:
     void     setTexture(Texture* t);
     void fillTexturedTri(const triangle& tri, const Texture* tex);
     void setCUDA(bool enable);
+    mesh loadStl(const std::string& path);
+
 };

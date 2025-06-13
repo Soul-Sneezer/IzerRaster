@@ -454,6 +454,55 @@ void Renderer2D::drawCircle(uint16_t x, uint16_t y, uint16_t radius, RGBA rgba)
     }
 }
 
+mesh Renderer2D::loadStl(const std::string& path) {
+    try {
+        // Use stl_reader to load the STL file
+        stl_reader::StlMesh<float, unsigned int> stlMesh(path);
+        
+        // Clear and reserve space for triangles
+        obj.tris.clear();  // ← Clear the global obj mesh
+        size_t numTriangles = stlMesh.num_tris();
+        obj.tris.reserve(numTriangles);
+        
+        // Process each triangle from the STL file
+        for (size_t i = 0; i < numTriangles; ++i) {
+            triangle tri;
+            
+            // Get the three vertices of the triangle
+            for (size_t corner = 0; corner < 3; ++corner) {
+                const float* coords = stlMesh.tri_corner_coords(i, corner);
+                
+                // Convert to glm::vec4 (x, y, z, 1.0 for homogeneous coordinates)
+                tri.p[corner] = glm::vec4(coords[0], coords[1], coords[2], 1.0f);
+                
+                // Generate simple UV coordinates for STL (since it doesn't have texture info)
+                // Simple planar mapping based on vertex position
+                float u = (coords[0] + 1.0f) * 0.5f; // Map X to [0,1]
+                float v = (coords[2] + 1.0f) * 0.5f; // Map Z to [0,1]
+                tri.t[corner] = glm::vec2(u, v);
+            }
+            
+            // Add the triangle to the global obj mesh
+            obj.tris.push_back(tri);
+        }
+        
+        // Set the current mesh pointer
+        currentMesh = &obj;
+        
+        std::cout << "STL file loaded successfully: " << path << std::endl;
+        std::cout << "Triangles loaded: " << numTriangles << std::endl;
+        
+        // Return true to indicate success (like loadObj does)
+        return obj;
+        
+    } catch (std::exception& e) {
+        std::cerr << "Error loading STL file '" << path << "': " << e.what() << std::endl;
+        // Return empty mesh on error
+        obj.tris.clear();
+        return obj;
+    }
+}
+
 void Renderer2D::drawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2, RGBA rgba)
 {
     if (x1 > x2)
