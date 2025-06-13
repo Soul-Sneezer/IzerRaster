@@ -13,7 +13,6 @@
 #include <sstream>
 #include <cmath>
 #include <cstdlib>      
-// pentru uploadTexture()
 
 Light light = {
          glm::vec3(0.0f, 10.0f, 10.0f), 
@@ -31,6 +30,8 @@ uint64_t Renderer2D::lastTime = 0;
 
 Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t height) : appName(appName), windowWidth(width), windowHeight(height)
 {
+    static MyInputLogger logger;
+    addInputListener(&logger);
 }
 
 void Renderer2D::setCUDA(bool enable) {
@@ -199,6 +200,10 @@ void Renderer2D::UserUpdate()
 
     for (auto &ev : poolInputEvents())
     {
+        for (auto* listener : inputListeners) {
+            listener->onInputEvent(ev);
+        }
+
         if (ev.type == "MOUSEMOTION") {
             int mouseX = ev.mouseX;
             int mouseY = ev.mouseY;
@@ -748,14 +753,7 @@ void Renderer2D::drawObj(mesh obj)
 {
     currentMesh = const_cast<mesh*>(&obj); // set the current mesh to the one being drawn
 #ifdef HAS_CUDA
-    if (useGPU)
-    {
-        gpuRender(obj);
-    }
-    else
-    {
-        simpleRender(obj);
-    }
+    gpuRender(obj);
 #else 
     simpleRender(obj);
 #endif 
@@ -766,113 +764,123 @@ void Renderer2D::drawObj(mesh obj)
 void Renderer2D::simpleRender(mesh meshObj)
 {
     std::vector<triangle> tria;
-
     triangle triProjected;
 
-    // glm::mat4 transl = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
+    // 1) View matrix
+    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-    // mesh newMesh = applyRenderMatrix(transl * rotX * rotZ, meshObj);
+    // 2) Model matrix (translate + rotate)
+    glm::mat4 T   = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, translate));
+    glm::mat4 RX  = glm::rotate(glm::mat4(1.0f),
+                                free_rotate ? free_theta : pitch_angle,
+                                glm::vec3(1, 0, 0));
+    glm::mat4 RZ  = glm::rotate(glm::mat4(1.0f),
+                                free_rotate ? free_theta : theta,
+                                glm::vec3(0, 0, 1));
+    glm::mat4 model = T * RX * RZ;
 
-    for (auto triTranslated : meshObj.tris)
+    // 3) Aplică DOAR model pe CPU
+    mesh transformedMesh = applyRenderMatrix(model, meshObj);
+
+    // 4) Per‐triangle: back‐face, proiectare, NDC→screen
+    for (auto &triTranslated : transformedMesh.tris)
     {
+        // ── back‐face culling în spațiul View:
+        glm::vec3 v0 = glm::vec3(view * triTranslated.p[0]);
+        glm::vec3 v1 = glm::vec3(view * triTranslated.p[1]);
+        glm::vec3 v2 = glm::vec3(view * triTranslated.p[2]);
+        glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+        if (glm::dot(normal, v0) >= 0.0f)
+            continue;
 
-        // Calculating the normals in order to display the visible triangles
-        glm::vec3 normal, line1, line2;
-        line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
-        line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
-        line1.z = triTranslated.p[1].z - triTranslated.p[0].z;
-
-        line2.x = triTranslated.p[2].x - triTranslated.p[0].x;
-        line2.y = triTranslated.p[2].y - triTranslated.p[0].y;
-        line2.z = triTranslated.p[2].z - triTranslated.p[0].z;
-
-        normal.x = line1.y * line2.z - line1.z * line2.y;
-        normal.y = line1.z * line2.x - line1.x * line2.z;
-        normal.z = line1.x * line2.y - line1.y * line2.x;
-
-        float l = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-        normal.x /= l;
-        normal.y /= l;
-        normal.z /= l;
-
-        // Display the visible triangles
-        if (normal.x * (triTranslated.p[0].x - cameraPos.x) + normal.y * (triTranslated.p[0].y - cameraPos.y) + normal.z * (triTranslated.p[0].z - cameraPos.z) > 0.0f)
+        // ── perspectivă & divide:
+        for (int i = 0; i < 3; ++i)
         {
-
-            for (int i = 0; i < 3; ++i) {
-    triProjected.p[i] = proj * triTranslated.p[i];
-    triProjected.t[i] = triTranslated.t[i];   //  ▲▲▲  păstrează UV-ul
-}
-
-
-            for (int i = 0; i < 3; i++)
-            {
-                triProjected.p[i].x /= triProjected.p[i].w;
-                triProjected.p[i].y /= triProjected.p[i].w;
-                triProjected.p[i].z /= triProjected.p[i].w;
-                triProjected.p[i].w  = 1.0f;  
-            }
-
-            // Scale
-            triProjected.p[0].x += 1.0f;
-            triProjected.p[0].y += 1.0f;
-            triProjected.p[1].x += 1.0f;
-            triProjected.p[1].y += 1.0f;
-            triProjected.p[2].x += 1.0f;
-            triProjected.p[2].y += 1.0f;
-            triProjected.p[0].x *= 0.5f * (float)windowWidth;
-            triProjected.p[0].y *= 0.5f * (float)windowHeight;
-            triProjected.p[1].x *= 0.5f * (float)windowWidth;
-            triProjected.p[1].y *= 0.5f * (float)windowHeight;
-            triProjected.p[2].x *= 0.5f * (float)windowWidth;
-            triProjected.p[2].y *= 0.5f * (float)windowHeight;
-
-            tria.push_back(triProjected);
+            glm::vec4 pView = view * triTranslated.p[i];  // Model→View
+            glm::vec4 pClip = proj * pView;               // View→Clip
+            float wClip    = pClip.w;
+            pClip /= wClip;                               // → NDC
+            pClip.w = wClip;                              // păstrează w
+            triProjected.p[i] = pClip;
+            triProjected.t[i] = triTranslated.t[i];
         }
+
+        // ── NDC → Screen
+        for (int i = 0; i < 3; ++i)
+        {
+            triProjected.p[i].x = (triProjected.p[i].x * 0.5f + 0.5f) * windowWidth;
+            triProjected.p[i].y = (1.0f - (triProjected.p[i].y * 0.5f + 0.5f)) * windowHeight;
+        }
+
+        tria.push_back(triProjected);
     }
 
-    // Sorting triagles for correct drawing order
-    sort(tria.begin(), tria.end(), [](triangle &t1, triangle &t2)
-         {
-			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
-			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
-			return z1 > z2; });
+    // 5) Sortare după profunzime
+    std::sort(tria.begin(), tria.end(),
+        [](auto &a, auto &b) {
+            float za = (a.p[0].z + a.p[1].z + a.p[2].z) / 3.0f;
+            float zb = (b.p[0].z + b.p[1].z + b.p[2].z) / 3.0f;
+            return za > zb;
+        });
 
-    // Drawing
-    for (const auto &triToRaster : tria)
+    // 6) Rasterizare
+    // helper pentru wireframe clipping:
+    auto drawClippedLine = [&](int x0,int y0,int x1,int y1, RGBA c) {
+        // trivial reject (ambele capete afară de aceeași parte)
+        if ((y0 < 0 && y1 < 0) ||
+            (y0 >= windowHeight && y1 >= windowHeight) ||
+            (x0 < 0 && x1 < 0) ||
+            (x0 >= windowWidth && x1 >= windowWidth))
+            return;
+        // clamp la margini
+        x0 = std::clamp(x0, 0, int(windowWidth)-1);
+        y0 = std::clamp(y0, 0, int(windowHeight)-1);
+        x1 = std::clamp(x1, 0, int(windowWidth)-1);
+        y1 = std::clamp(y1, 0, int(windowHeight)-1);
+        drawLine(x0, y0, x1, y1, c);
+    };
+
+    for (auto &t : tria)
     {
-        if (this->mode == RenderMode::SHADED || this->mode == RenderMode::SHADED_WIREFRAME)
-            fillTriangle(
-                static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-                static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-                static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                RGBA(200, 200, 200, 255));
-
-        if (this->mode == RenderMode::WIREFRAME || this->mode == RenderMode::SHADED_WIREFRAME)
-            drawTriangle(
-                static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-                static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-                static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                RGBA(100, 100, 100, 200));
-  
-#ifdef HAS_CUDA 
-        if (mode == RenderMode::TEXTURED || mode == RenderMode::TEXTURED_WIREFRAME)
-            {
-                fillTexturedTri(triToRaster, currentTex ? currentTex : meshObj.texture);
-            }
-#endif
-         if (mode == RenderMode::SHADED_WIREFRAME || mode == RenderMode::WIREFRAME || mode == RenderMode::TEXTURED_WIREFRAME)
+        if (mode == RenderMode::SHADED || mode == RenderMode::SHADED_WIREFRAME)
         {
-            // Draw wireframe
-            drawLine(static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-                     static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y), RGBA(255, 255, 255, 255));
-            drawLine(static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-                     static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y), RGBA(255, 255, 255, 255));
-            drawLine(static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                     static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y), RGBA(255, 255, 255, 255));
+            fillTriangle(
+                (uint16_t)t.p[0].x, (uint16_t)t.p[0].y,
+                (uint16_t)t.p[1].x, (uint16_t)t.p[1].y,
+                (uint16_t)t.p[2].x, (uint16_t)t.p[2].y,
+                RGBA(200,200,200,255));
         }
 
-   }
+        if (mode == RenderMode::WIREFRAME || mode == RenderMode::SHADED_WIREFRAME)
+        {
+            drawTriangle(
+                (uint16_t)t.p[0].x, (uint16_t)t.p[0].y,
+                (uint16_t)t.p[1].x, (uint16_t)t.p[1].y,
+                (uint16_t)t.p[2].x, (uint16_t)t.p[2].y,
+                RGBA(60,60,60,120));
+        }
+
+        if (mode == RenderMode::TEXTURED || mode == RenderMode::TEXTURED_WIREFRAME)
+        {
+            fillTexturedTri(t, currentTex ? currentTex : meshObj.texture);
+        }
+
+        // wireframe overlay, cu clipping
+        if (mode == RenderMode::WIREFRAME
+         || mode == RenderMode::SHADED_WIREFRAME
+         || mode == RenderMode::TEXTURED_WIREFRAME)
+        {
+            drawClippedLine(int(t.p[0].x+0.5f), int(t.p[0].y+0.5f),
+                            int(t.p[1].x+0.5f), int(t.p[1].y+0.5f),
+                            RGBA(255,255,255,255));
+            drawClippedLine(int(t.p[1].x+0.5f), int(t.p[1].y+0.5f),
+                            int(t.p[2].x+0.5f), int(t.p[2].y+0.5f),
+                            RGBA(255,255,255,255));
+            drawClippedLine(int(t.p[2].x+0.5f), int(t.p[2].y+0.5f),
+                            int(t.p[0].x+0.5f), int(t.p[0].y+0.5f),
+                            RGBA(255,255,255,255));
+        }
+    }
 }
 
 #ifdef HAS_CUDA
@@ -1392,40 +1400,35 @@ std::vector<InputEvent> Renderer2D::poolInputEvents()
     return events;
 }
 
-#ifdef HAS_CUDA
 // TEXTURĂ: încarcă din disc + upload pe GPU                            
 Texture* Renderer2D::loadTexture(const std::string& path)
 {
     currentTex = new Texture(path);             // ① încarcă în RAM & VRAM
 
+#ifdef HAS_CUDA
     if (useGPU) {                               // ② trimite către kernel
         uploadTexture(currentTex->device, currentTex->w, currentTex->h);
-        setTexturing(true);
     } else {
-        setTexturing(false);
+        setTexturing(true);
         std::cerr << "[WARN] CPU path încă nu e implementat pentru sampling!\n";
     }
-    setTexturing(false);
-    std::cerr<<"[WARN] CPU path inca nu e implementat pentru sampling!\n";
+#endif
     if (currentMesh)                            // ③ leagă de mesh curent
         currentMesh->texture = currentTex;
 
     return currentTex;                          // ownership rămâne în C++
 }
 
-#endif
-
-#ifdef HAS_CUDA
 void Renderer2D::setTexture(Texture* t)
 {
     currentTex = t;
+
+#ifdef HAS_CUDA 
     if (useGPU)
         uploadTexture(t->device, t->w, t->h);
-        setTexturing(true);   
-}
-
+    setTexturing(true);   
 #endif
-
+}
 
 static uint32_t sampleCPU(const Texture* tex, float u, float v)
 {
@@ -1440,73 +1443,61 @@ static uint32_t sampleCPU(const Texture* tex, float u, float v)
 
     return tex->pixels[y * tex->w + x];
 }
-  
-#ifdef HAS_CUDA
+
 void Renderer2D::fillTexturedTri(const triangle& tri, const Texture* tex)
 {
     if (!tex) return;
 
-    // --- 1) bounding-box clamped la ecran -------------------------
+    // 1) Bounding-box
     int minX = int(std::floor(std::min({tri.p[0].x, tri.p[1].x, tri.p[2].x})));
     int maxX = int(std::ceil (std::max({tri.p[0].x, tri.p[1].x, tri.p[2].x})));
     int minY = int(std::floor(std::min({tri.p[0].y, tri.p[1].y, tri.p[2].y})));
     int maxY = int(std::ceil (std::max({tri.p[0].y, tri.p[1].y, tri.p[2].y})));
 
-    minX = std::clamp(minX, 0, int(windowWidth )-1);
-    maxX = std::clamp(maxX, 0, int(windowWidth )-1);
-    minY = std::clamp(minY, 0, int(windowHeight)-1);
-    maxY = std::clamp(maxY, 0, int(windowHeight)-1);
+    minX = std::clamp(minX, 0, int(windowWidth ) - 1);
+    maxX = std::clamp(maxX, 0, int(windowWidth ) - 1);
+    minY = std::clamp(minY, 0, int(windowHeight) - 1);
+    maxY = std::clamp(maxY, 0, int(windowHeight) - 1);
 
-    // --- 2) edge-function (barycentric) pre-compute ---------------
-    auto edge = [](const glm::vec4& a,const glm::vec4& b,float x,float y)
-                { return (b.y-a.y)*(x-a.x) - (b.x-a.x)*(y-a.y); };
+    // 2) Edge function (pentru barycentrice)
+    auto edge = [](const glm::vec4& a,const glm::vec4& b,float x,float y) {
+        return (b.y - a.y)*(x - a.x) - (b.x - a.x)*(y - a.y);
+    };
     const float denom = edge(tri.p[0], tri.p[1], tri.p[2].x, tri.p[2].y);
     if (denom == 0.0f) return;  // degenerat
 
-    // pentru perspectivă-correct: 1/w + UV/w
+    // pregătire perspective-correct
     float w0Inv = 1.0f / tri.p[0].w;
     float w1Inv = 1.0f / tri.p[1].w;
     float w2Inv = 1.0f / tri.p[2].w;
-
     glm::vec2 uv0 = tri.t[0] * w0Inv;
     glm::vec2 uv1 = tri.t[1] * w1Inv;
     glm::vec2 uv2 = tri.t[2] * w2Inv;
 
-    // --- 3) parcurgere pixeli -------------------------------------
-    for (int y = minY; y <= maxY; ++y)
-    for (int x = minX; x <= maxX; ++x)
-    {
-        float w0 = edge(tri.p[1], tri.p[2], x+0.5f, y+0.5f) / denom;
-        float w1 = edge(tri.p[2], tri.p[0], x+0.5f, y+0.5f) / denom;
-        float w2 = 1.0f - w0 - w1;
-        if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+    // 3) Raster scan
+    for (int y = minY; y <= maxY; ++y) {
+        for (int x = minX; x <= maxX; ++x) {
+            float w0 = edge(tri.p[1], tri.p[2], x + 0.5f, y + 0.5f) / denom;
+            float w1 = edge(tri.p[2], tri.p[0], x + 0.5f, y + 0.5f) / denom;
+            float w2 = 1.0f - w0 - w1;
+            if (w0 < 0 || w1 < 0 || w2 < 0) continue;
 
-        // adâncime interpolată
-        float z = w0*tri.p[0].z + w1*tri.p[1].z + w2*tri.p[2].z;
-        int   idx = y * windowWidth + x;
-        if (z >= depthBufferCPU[idx]) continue;   // FAIL depth-test
+            // depth test
+            float z = w0 * tri.p[0].z + w1 * tri.p[1].z + w2 * tri.p[2].z;
+            int idx = y * windowWidth + x;
+            if (z >= depthBufferCPU[idx]) continue;
 
-        // --- 4) perspective-correct UV -----------------------------
-        // --- 4) perspective-correct UV ----------------------------------
-float invW = w0*w0Inv + w1*w1Inv + w2*w2Inv;
-float u = (w0*uv0.x + w1*uv1.x + w2*uv2.x) / invW;
-float v = (w0*uv0.y + w1*uv1.y + w2*uv2.y) / invW;
+            // 4) Perspective-correct UV
+            float invW = w0*w0Inv + w1*w1Inv + w2*w2Inv;
+            float u = (w0*uv0.x + w1*uv1.x + w2*uv2.x) / invW;
+            float v = (w0*uv0.y + w1*uv1.y + w2*uv2.y) / invW;
 
-/*  ▲  adaugă aici 1 linie  */
-u -= std::floor(u);         // repeat pe orizontală
-v -= std::floor(v);         // repeat pe verticală
+            // 5) Sample CPU (repeat+clamp+NPOT)
+            uint32_t src = sampleCPU(tex, u, v);
 
-int tx = int(u * tex->w) & (tex->w - 1);           // repeat (funcţionează pt. texturi POT)
-int ty = int((1.0f - v) * tex->h) & (tex->h - 1);  // idem
-
-
-
-
-
-
-        uint32_t src = tex->pixels[ty * tex->w + tx];
-        screenBuffer[idx]     = *reinterpret_cast<RGBA*>(&src);
-        depthBufferCPU[idx]   = z;
+            // 6) Scrie pixel şi depth
+            screenBuffer[idx]   = *reinterpret_cast<RGBA*>(&src);
+            depthBufferCPU[idx] = z;
+        }
     }
 }
-#endif

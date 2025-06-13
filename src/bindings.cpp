@@ -242,12 +242,12 @@ py::enum_<RenderMode>(m, "RenderMode")
         .def("applyRenderMatrix", &Renderer2D::applyRenderMatrix)
         .def("poolInputEvents", &Renderer2D::poolInputEvents)
         .def("detectInputEvent", &Renderer2D::detectInputEvent)
-        .def_readwrite("renderMode", &Renderer2D::mode);
+        .def_readwrite("renderMode", &Renderer2D::mode)
+        .def("loadTexture", &Renderer2D::loadTexture,py::return_value_policy::reference)   // NU transferă ownership
+        .def("setTexture",  &Renderer2D::setTexture);
 
 #ifdef HAS_CUDA
     py::class_<Renderer2D, PyRenderer2D>(m "Renderer2D")
-        .def("loadTexture", &Renderer2D::loadTexture,py::return_value_policy::reference)   // NU transferă ownership
-        .def("setCUDA", &Renderer2D::setCUDA)  
-        .def("setTexture",  &Renderer2D::setTexture);
+        .def("setCUDA", &Renderer2D::setCUDA);  
 #endif
 }

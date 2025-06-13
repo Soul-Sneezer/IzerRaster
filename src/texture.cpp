@@ -11,7 +11,6 @@
 #include <iostream> // for std::cerr
 
 
-#ifdef HAS_CUDA
 Texture::Texture(const std::string& filename)
 {
     int nChannels;
@@ -25,13 +24,17 @@ Texture::Texture(const std::string& filename)
 
     // ----- alocare pe device + copii-rea ------------
     size_t bytes = pixels.size() * sizeof(uint32_t);
+
+#ifdef HAS_CUDA
     cudaMalloc(&device, bytes);
     cudaMemcpy(device, pixels.data(), bytes, cudaMemcpyHostToDevice);
+#endif
 }
 
 Texture::~Texture()
 {
+#ifdef HAS_CUDA
     if (device)
         cudaFree(device);
-}
 #endif
+}
