@@ -5,6 +5,11 @@
 #include <texture.hpp>
 
 
+#ifdef HAS_CUDA
+    #include <texture.hpp>
+#endif
+
+
 namespace py = pybind11;
 
 class PyRenderer2D : public Renderer2D 
@@ -209,6 +214,7 @@ py::enum_<RenderMode>(m, "RenderMode")
         .value("SHADED_WIREFRAME", RenderMode::SHADED_WIREFRAME)
         .value("TEXTURED", RenderMode::TEXTURED)
         .value("TEXTURED_WIREFRAME", RenderMode::TEXTURED_WIREFRAME);
+
     py::class_<Renderer2D, PyRenderer2D>(m, "Renderer2D")
         .def(py::init<const std::string&, uint16_t, uint16_t>(),
              py::arg("appName") = "Renderer2D",
@@ -236,8 +242,12 @@ py::enum_<RenderMode>(m, "RenderMode")
         .def("applyRenderMatrix", &Renderer2D::applyRenderMatrix)
         .def("poolInputEvents", &Renderer2D::poolInputEvents)
         .def("detectInputEvent", &Renderer2D::detectInputEvent)
-        .def("loadTexture", &Renderer2D::loadTexture,py::return_value_policy::reference)   // NU transferă ownership
-        .def("setTexture",  &Renderer2D::setTexture)
-        .def("setCUDA", &Renderer2D::setCUDA)
         .def_readwrite("renderMode", &Renderer2D::mode);
+
+#ifdef HAS_CUDA
+    py::class_<Renderer2D, PyRenderer2D>(m "Renderer2D")
+        .def("loadTexture", &Renderer2D::loadTexture,py::return_value_policy::reference)   // NU transferă ownership
+        .def("setCUDA", &Renderer2D::setCUDA)  
+        .def("setTexture",  &Renderer2D::setTexture);
+#endif
 }

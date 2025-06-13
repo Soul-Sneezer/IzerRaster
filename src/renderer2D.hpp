@@ -9,7 +9,8 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_hints.h> 
 #include <SDL3/SDL_keycode.h> 
-#include <SDL3_ttf/SDL_ttf.h>
+#include <SDL3/SDL_events.h> 
+#include <SDL3/SDL_keycode.h> 
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtx/transform.hpp>
@@ -118,10 +119,6 @@ private:
     mesh obj;
     glm::mat4 rotX, rotZ, transl, proj;
     float theta;
-
-
-       
-    TTF_Font* font; 
     uint32_t frameCount = 0;            // Frames since last FPS update
     uint32_t fps = 0;                   // Current FPS value
     char fpsString[32] = "FPS: 0";
@@ -191,5 +188,4 @@ public:
     void fillTexturedTri(const triangle& tri, const Texture* tex);
     void setCUDA(bool enable);
     mesh loadStl(const std::string& path);
-
 };

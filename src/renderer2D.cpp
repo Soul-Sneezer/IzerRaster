@@ -1,6 +1,11 @@
 #define SDL_MAIN_HANDLED
 #include "renderer2D.hpp"
-#include "render.h" // CUDA rasterizer declarations (initCuda, renderFrame, cleanupCuda)
+#ifdef HAS_CUDA
+    #include "render.h" // CUDA rasterizer declarations (initCuda, renderFrame, cleanupCuda)
+    #include <cuda_runtime.h>
+    #incldue "texture.hpp"
+    #include "render.h"        // pentru uploadTexture()
+#endif
 #include <iostream>
 #include <algorithm>
 #include <string>
@@ -8,9 +13,8 @@
 #include <sstream>
 #include <cuda_runtime.h>
 #include <cmath>
-#include <cstdlib>
-#include "texture.hpp"
-#include "render.h"        // pentru uploadTexture()
+#include <cstdlib>      
+// pentru uploadTexture()
 
 Light light = {
          .position = glm::vec3(0.0f, 10.0f, 10.0f), 
@@ -34,40 +38,37 @@ void Renderer2D::setCUDA(bool enable) {
     noCUDA = enable;
 }
 
+uint64_t Renderer2D::lastTime = 0;
+
+Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t height) : appName(appName), windowWidth(width), windowHeight(height)
+{
+}
+
 void Renderer2D::Init()
 {
     SDL_SetAppMetadata(appName.c_str(), "1.0", "renderer");
 
     int deviceCount = 0;
+#ifdef HAS_CUDA
     cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
-
-    if (cudaStatus == cudaSuccess && deviceCount > 0 && !noCUDA) {
+    if (cudaStatus == cudaSuccess && deviceCount > 0) {
         std::cout << "CUDA device(s) found: " << deviceCount << ". Using GPU mode.\n";
         this->useGPU = true;
     } else {
         std::cout << "No CUDA devices found. Falling back to CPU mode.\n";
         this->useGPU = false;
     }
-
+#endif
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
         return;
     }
 
-    /*
-    if (!TTF_Init())
-    {
-        std::cerr << "SDL_ttf could not initialize!"<< std::endl;
-        SDL_Quit();
-        return;
-    }
-    */
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
     if (!SDL_CreateWindowAndRenderer(appName.c_str(), windowWidth, windowHeight, 0, &window, &renderer))
     {
         std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
-        // TTF_Quit();
         SDL_Quit();
 
         return;
@@ -169,8 +170,89 @@ void Renderer2D::Run()
     
         // Render one frame (input handled inside Render/UserUpdate)
         Render();
+      
+    if (!SDL_SetRenderVSync(renderer, SDL_RENDERER_VSYNC_DISABLED)) {
+    std::cerr << "SDL_SetRenderVSync failed: " << SDL_GetError() << "\n";
     }
+
+    this->screenTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, windowWidth, windowHeight);
+    if (!screenTexture)
+    {
+        std::cerr << "Screen texture could not be created! SDL Error: " << SDL_GetError() << std::endl;
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+
+        return;
+    }
+
+    this->screenBuffer.resize(windowWidth * windowHeight);
+    depthBufferCPU.resize(windowWidth * windowHeight, 1e9f); // iniţial infinit
+
+
+    // for triangle projections and geometry
+    float fNear = 0.1f;
+    float fFar = 1000.0f;
+    float fFov = 60.0f;
+    float fAspectRatio = (float)windowWidth / (float)windowHeight;
+
+    proj = glm::perspective(glm::radians(fFov), fAspectRatio, fNear, fFar);
+
+    cameraPos = glm::vec4{0};
+
+    isRunning = true;
+
+    this->mode = RenderMode::TEXTURED_WIREFRAME; // default render mode
+
+#ifdef HAS_CUDA
+    if (useGPU)
+    {
+        if (!initCuda(windowWidth, windowHeight))
+        {
+            std::cerr << "ERROR: CUDA rasterizer initialization failed!" << std::endl;
+            // If GPU init fails, shut down and exit (no CPU fallback implemented here)
+            Quit();
+            return;
+        }
+        // Allocate host buffers for pixel color and depth (to receive CUDA output)
+        cudaPixelBuffer = (uint32_t *)std::malloc(windowWidth * windowHeight * sizeof(uint32_t));
+        cudaDepthBuffer = (float *)std::malloc(windowWidth * windowHeight * sizeof(float));
+
+    }
+#endif
+     perfFreq = SDL_GetPerformanceFrequency();
+    lastPerfCounter = SDL_GetPerformanceCounter();
 }
+
+uint64_t Renderer2D::GetCurrentTime()
+{
+    return SDL_GetTicks();
+}
+
+float Renderer2D::GetDeltaTime()
+{
+    return (GetCurrentTime() - Renderer2D::lastTime) / 1000.0f;
+}
+
+// While Running
+void Renderer2D::Run()
+{
+    Renderer2D::lastTime = GetCurrentTime();
+    while (isRunning)
+    {
+        float deltaTime = GetDeltaTime();
+        Renderer2D::lastTime = GetCurrentTime();
+    
+        // uploadLighting(
+        //          Light{light.position},
+        //          cameraPos,
+        //          Material{mat.diffuseColour, mat.specularColour, mat.shininess}
+        // );        
+    
+        // Render one frame (input handled inside Render/UserUpdate)
+        Render();
+    }
+ 
 
 void Renderer2D::Render()
 {
@@ -198,8 +280,8 @@ void Renderer2D::Render()
     char title[128];
     std::snprintf(title, sizeof(title), "%s — FPS: %.1f", appName.c_str(), fps);
     SDL_SetWindowTitle(window, title);
-}
-
+}  
+  
 void Renderer2D::UserUpdate()
 {
     float cameraSpeed = 0.2f;
@@ -289,7 +371,7 @@ void Renderer2D::UserUpdate()
 
     drawObj(applyRenderMatrix(T * RX * RZ, obj));
 }
-
+  
 void Renderer2D::Quit()
 {
     if (!isRunning && window == nullptr && renderer == nullptr)
@@ -297,6 +379,7 @@ void Renderer2D::Quit()
         return;
     }
 
+  #ifdef HAS_CUDA
     if (useGPU)
     {
         if (cudaPixelBuffer)
@@ -311,6 +394,7 @@ void Renderer2D::Quit()
         }
         cleanupCuda();
     }
+  #endif
 
     if (renderer)
     {
@@ -404,56 +488,6 @@ void Renderer2D::fillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, RG
     }
 }
 
-// https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
-void Renderer2D::drawCircle(uint16_t x, uint16_t y, uint16_t radius, RGBA rgba)
-{
-    if (radius < 0)
-        return;
-
-    if (radius == 0)
-    {
-        drawPoint(x, y, rgba);
-        return;
-    }
-
-    // midpoint circle algorithm
-    int startX = 0;
-    int startY = radius;
-
-    int decision = 3 - 2 * radius;
-
-    auto plotOctants = [&](int offsetX, int offsetY) // so you divide the space into 8 parts, and draw in each of them
-    {
-        drawPoint(x + offsetX, y + offsetY, rgba);
-        drawPoint(x - offsetX, y + offsetY, rgba);
-        drawPoint(x + offsetX, y - offsetY, rgba);
-        drawPoint(x - offsetX, y - offsetY, rgba);
-        drawPoint(x + offsetY, y + offsetX, rgba);
-        drawPoint(x - offsetY, y + offsetX, rgba);
-        drawPoint(x + offsetY, y - offsetX, rgba);
-        drawPoint(x - offsetY, y - offsetX, rgba);
-    };
-
-    plotOctants(startX, startY); // point first points on the axes
-
-    while (startX <= startY)
-    {
-        startX++; // you always move horizontally
-
-        if (decision > 0) // if true, you also need to move vertically
-        {
-            // midpoints was outside the circle
-            startY--; // y-- because the upper left corner is (0,0), so going up means, decrementing
-
-            decision = decision + 4 * (startX - startY) + 10;
-        }
-        else // midpoint was on the circle or inside it
-            decision = decision + 4 * startX + 6;
-
-        plotOctants(startX, startY);
-    }
-}
-
 mesh Renderer2D::loadStl(const std::string& path) {
     try {
         // Use stl_reader to load the STL file
@@ -500,6 +534,58 @@ mesh Renderer2D::loadStl(const std::string& path) {
         // Return empty mesh on error
         obj.tris.clear();
         return obj;
+    }
+}
+
+// https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
+void Renderer2D::
+  
+  (uint16_t x, uint16_t y, uint16_t radius, RGBA rgba)
+{
+    if (radius < 0)
+        return;
+
+    if (radius == 0)
+    {
+        drawPoint(x, y, rgba);
+        return;
+    }
+
+    // midpoint circle algorithm
+    int startX = 0;
+    int startY = radius;
+
+    int decision = 3 - 2 * radius;
+
+    auto plotOctants = [&](int offsetX, int offsetY) // so you divide the space into 8 parts, and draw in each of them
+    {
+        drawPoint(x + offsetX, y + offsetY, rgba);
+        drawPoint(x - offsetX, y + offsetY, rgba);
+        drawPoint(x + offsetX, y - offsetY, rgba);
+        drawPoint(x - offsetX, y - offsetY, rgba);
+        drawPoint(x + offsetY, y + offsetX, rgba);
+        drawPoint(x - offsetY, y + offsetX, rgba);
+        drawPoint(x + offsetY, y - offsetX, rgba);
+        drawPoint(x - offsetY, y - offsetX, rgba);
+    };
+
+    plotOctants(startX, startY); // point first points on the axes
+
+    while (startX <= startY)
+    {
+        startX++; // you always move horizontally
+
+        if (decision > 0) // if true, you also need to move vertically
+        {
+            // midpoints was outside the circle
+            startY--; // y-- because the upper left corner is (0,0), so going up means, decrementing
+
+            decision = decision + 4 * (startX - startY) + 10;
+        }
+        else // midpoint was on the circle or inside it
+            decision = decision + 4 * startX + 6;
+
+        plotOctants(startX, startY);
     }
 }
 
@@ -649,95 +735,6 @@ void Renderer2D::fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2
         std::pair<uint16_t, uint16_t> v3 = std::make_pair(v0.first + (uint16_t)((float)(v1.second - v0.second) / (v2.second - v0.second) * (v2.first - v0.first)), v1.second);
         fillBottomFlatTriangle(v0.first, v0.second, v1.first, v1.second, v3.first, v3.second, rgba);
         fillTopFlatTriangle(v2.first, v2.second, v3.first, v3.second, v1.first, v1.second, rgba);
-    }
-}
-
-// Matrix Render for each triangle handle
-mesh Renderer2D::applyRenderMatrix(glm::mat4 mat, mesh objMesh)
-{
-    mesh newMesh;
-
-    if (useGPU)
-    {
-
-        currentTransform = mat;
-        return objMesh;
-    }
-    for (const auto& tri : objMesh.tris) {
-    triangle nt;
-    nt.p[0] = mat * tri.p[0];
-    nt.p[1] = mat * tri.p[1];
-    nt.p[2] = mat * tri.p[2];
-
-    // ► COPIEM şi UV-urile!
-    nt.t[0] = tri.t[0];
-    nt.t[1] = tri.t[1];
-    nt.t[2] = tri.t[2];
-
-    newMesh.tris.push_back(nt);
-}
-
-
-    return newMesh;
-}
-
-
-
-// .obj load from path
-mesh Renderer2D::loadObj(std::string path)
-{
-    bool ok = obj.LoadFromObjectFile(path);
-    currentMesh = &obj;
-
-    // 1) Verificăm dacă toate UV-urile sunt (0,0). 
-    //    Dacă da → înseamnă că fişierul OBJ nu conţine vt şi trebuie să generăm noi UV.
-    bool needGenerateUV = true;
-    for (auto &tri : obj.tris) {
-        for (int i = 0; i < 3; ++i) {
-            if (tri.t[i] != glm::vec2(0.0f, 0.0f)) {
-                needGenerateUV = false;
-                break;
-            }
-        }
-        if (!needGenerateUV) break;
-    }
-
-    // 2) Generare UV sferic dacă e cazul
-    if (needGenerateUV) {
-        for (auto &tri : obj.tris) {
-            for (int i = 0; i < 3; ++i) {
-                // Normalizăm punctul pentru a-l aduce pe sfera unitate:
-                glm::vec3 p = glm::normalize(glm::vec3(tri.p[i]));
-                // Calculăm coordonatele UV sferice:
-                //   – u variaza de la 0 la 1 → pe orizontală folosind atan2
-                //   – v variaza de la 0 la 1 → pe verticală folosind asin
-                float u = 0.5f + (atan2f(p.z, p.x) / (2.0f * glm::pi<float>()));
-                float v = 0.5f - (asinf(p.y)          / glm::pi<float>());
-                tri.t[i] = glm::vec2(u, v);
-            }
-        }
-    }
-
-    std::cout << "Loaded triangles: " << obj.tris.size()
-              << (needGenerateUV ? " (UV generated spherically)\n"
-                                 : " (UV loaded from file)\n");
-
-    // glm::vec3 objectCenter = computeObjectCenter(obj);
-    return obj;
-}
-
-
-// .obj drawing
-void Renderer2D::drawObj(mesh obj)
-{
-    currentMesh = const_cast<mesh*>(&obj); // set the current mesh to the one being drawn
-    if (useGPU)
-    {
-        gpuRender(obj);
-    }
-    else
-    {
-        simpleRender(obj);
     }
 }
 
@@ -899,8 +896,240 @@ void Renderer2D::drawCube()
     simpleRender(meshCube);
 }
 
+// Matrix Render for each triangle handle
+mesh Renderer2D::applyRenderMatrix(glm::mat4 mat, mesh objMesh)
+{
+    mesh newMesh;
+
+#ifdef HAS_CUDA
+    if (useGPU)
+    {
+
+        currentTransform = mat;
+        return objMesh;
+    }
+#endif
+    for (const auto& tri : objMesh.tris) {
+    triangle nt;
+    nt.p[0] = mat * tri.p[0];
+    nt.p[1] = mat * tri.p[1];
+    nt.p[2] = mat * tri.p[2];
+
+    // ► COPIEM şi UV-urile!
+    nt.t[0] = tri.t[0];
+    nt.t[1] = tri.t[1];
+    nt.t[2] = tri.t[2];
+
+    newMesh.tris.push_back(nt);
+}
 
 
+    return newMesh;
+}
+
+// .obj load from path
+mesh Renderer2D::loadObj(std::string path)
+{
+    bool ok = obj.LoadFromObjectFile(path);
+    currentMesh = &obj;
+
+    // 1) Verificăm dacă toate UV-urile sunt (0,0). 
+    //    Dacă da → înseamnă că fişierul OBJ nu conţine vt şi trebuie să generăm noi UV.
+    bool needGenerateUV = true;
+    for (auto &tri : obj.tris) {
+        for (int i = 0; i < 3; ++i) {
+            if (tri.t[i] != glm::vec2(0.0f, 0.0f)) {
+                needGenerateUV = false;
+                break;
+            }
+        }
+        if (!needGenerateUV) break;
+    }
+
+    // 2) Generare UV sferic dacă e cazul
+    if (needGenerateUV) {
+        for (auto &tri : obj.tris) {
+            for (int i = 0; i < 3; ++i) {
+                // Normalizăm punctul pentru a-l aduce pe sfera unitate:
+                glm::vec3 p = glm::normalize(glm::vec3(tri.p[i]));
+                // Calculăm coordonatele UV sferice:
+                //   – u variaza de la 0 la 1 → pe orizontală folosind atan2
+                //   – v variaza de la 0 la 1 → pe verticală folosind asin
+                float u = 0.5f + (atan2f(p.z, p.x) / (2.0f * glm::pi<float>()));
+                float v = 0.5f - (asinf(p.y)          / glm::pi<float>());
+                tri.t[i] = glm::vec2(u, v);
+            }
+        }
+    }
+
+    std::cout << "Loaded triangles: " << obj.tris.size()
+              << (needGenerateUV ? " (UV generated spherically)\n"
+                                 : " (UV loaded from file)\n");
+
+    return obj;
+}
+
+
+
+// .obj drawing
+void Renderer2D::drawObj(mesh obj)
+{
+    currentMesh = const_cast<mesh*>(&obj); // set the current mesh to the one being drawn
+#ifdef HAS_CUDA
+    if (useGPU)
+    {
+        gpuRender(obj);
+    }
+    else
+    {
+        simpleRender(obj);
+    }
+#else 
+    simpleRender(obj);
+#endif 
+
+}
+
+// mesh randering
+void Renderer2D::simpleRender(mesh meshObj)
+{
+    std::vector<triangle> tria;
+
+    triangle triProjected;
+
+    // glm::mat4 transl = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
+
+    // mesh newMesh = applyRenderMatrix(transl * rotX * rotZ, meshObj);
+
+    for (auto triTranslated : meshObj.tris)
+    {
+
+        // Calculating the normals in order to display the visible triangles
+        glm::vec3 normal, line1, line2;
+        line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
+        line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
+        line1.z = triTranslated.p[1].z - triTranslated.p[0].z;
+
+        line2.x = triTranslated.p[2].x - triTranslated.p[0].x;
+        line2.y = triTranslated.p[2].y - triTranslated.p[0].y;
+        line2.z = triTranslated.p[2].z - triTranslated.p[0].z;
+
+        normal.x = line1.y * line2.z - line1.z * line2.y;
+        normal.y = line1.z * line2.x - line1.x * line2.z;
+        normal.z = line1.x * line2.y - line1.y * line2.x;
+
+        float l = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+        normal.x /= l;
+        normal.y /= l;
+        normal.z /= l;
+
+        // Display the visible triangles
+        if (normal.x * (triTranslated.p[0].x - cameraPos.x) + normal.y * (triTranslated.p[0].y - cameraPos.y) + normal.z * (triTranslated.p[0].z - cameraPos.z) > 0.0f)
+        {
+
+            for (int i = 0; i < 3; ++i) {
+    triProjected.p[i] = proj * triTranslated.p[i];
+    triProjected.t[i] = triTranslated.t[i];   //  ▲▲▲  păstrează UV-ul
+}
+
+
+            for (int i = 0; i < 3; i++)
+            {
+                triProjected.p[i].x /= triProjected.p[i].w;
+                triProjected.p[i].y /= triProjected.p[i].w;
+                triProjected.p[i].z /= triProjected.p[i].w;
+                triProjected.p[i].w  = 1.0f;  
+            }
+
+            // Scale
+            triProjected.p[0].x += 1.0f;
+            triProjected.p[0].y += 1.0f;
+            triProjected.p[1].x += 1.0f;
+            triProjected.p[1].y += 1.0f;
+            triProjected.p[2].x += 1.0f;
+            triProjected.p[2].y += 1.0f;
+            triProjected.p[0].x *= 0.5f * (float)windowWidth;
+            triProjected.p[0].y *= 0.5f * (float)windowHeight;
+            triProjected.p[1].x *= 0.5f * (float)windowWidth;
+            triProjected.p[1].y *= 0.5f * (float)windowHeight;
+            triProjected.p[2].x *= 0.5f * (float)windowWidth;
+            triProjected.p[2].y *= 0.5f * (float)windowHeight;
+
+            tria.push_back(triProjected);
+        }
+    }
+
+    // Sorting triagles for correct drawing order
+    sort(tria.begin(), tria.end(), [](triangle &t1, triangle &t2)
+         {
+			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
+			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
+			return z1 > z2; });
+
+    // Drawing
+    for (const auto &triToRaster : tria)
+    {
+        if (this->mode == RenderMode::SHADED || this->mode == RenderMode::SHADED_WIREFRAME)
+            fillTriangle(
+                static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
+                static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
+                static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
+                RGBA(200, 200, 200, 255));
+
+        if (this->mode == RenderMode::WIREFRAME || this->mode == RenderMode::SHADED_WIREFRAME)
+            drawTriangle(
+                static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
+                static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
+                static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
+                RGBA(100, 100, 100, 200));
+  
+#ifdef HAS_CUDA 
+        if (mode == RenderMode::TEXTURED || mode == RenderMode::TEXTURED_WIREFRAME)
+            {
+                fillTexturedTri(triToRaster, currentTex ? currentTex : meshObj.texture);
+            }
+#endif
+         if (mode == RenderMode::SHADED_WIREFRAME || mode == RenderMode::WIREFRAME || mode == RenderMode::TEXTURED_WIREFRAME)
+        {
+            // Draw wireframe
+            drawLine(static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
+                     static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y), RGBA(255, 255, 255, 255));
+            drawLine(static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
+                     static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y), RGBA(255, 255, 255, 255));
+            drawLine(static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
+                     static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y), RGBA(255, 255, 255, 255));
+        }
+
+   }
+}
+
+void Renderer2D::drawCube()
+{
+    meshCube.tris = {
+        {glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)},
+        {glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
+
+        {glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+        {glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f)},
+
+        {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)},
+        {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)},
+
+        {glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
+        {glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)},
+
+        {glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+        {glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)},
+
+        {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)},
+        {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
+
+    };
+    simpleRender(meshCube);
+}
+
+
+#ifdef HAS_CUDA
 void Renderer2D::gpuRender(const mesh &newObj)
 {
     if (newObj.tris.empty())
@@ -913,8 +1142,7 @@ void Renderer2D::gpuRender(const mesh &newObj)
     float time = SDL_GetTicks() * 0.001f;
 
     // 1) Construim matricile View / Projection
-    glm::mat4 viewMat = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-    
+    glm::mat4 viewMat = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -5));
     glm::mat4 projMat = glm::perspective(
         glm::radians(60.0f),
         float(windowWidth) / float(windowHeight),
@@ -1037,7 +1265,7 @@ void Renderer2D::gpuRender(const mesh &newObj)
         mode == RenderMode::SHADED_WIREFRAME ||
         mode == RenderMode::TEXTURED_WIREFRAME)
     {
-        uint32_t lineColor = 0x80FFFFFFu;
+        uint32_t lineColor = 0xFF00FF00u;
         auto clampPoint = [&](int &x, int &y)
         {
             return x >= 0 && x < windowWidth && y >= 0 && y < windowHeight;
@@ -1092,7 +1320,8 @@ void Renderer2D::gpuRender(const mesh &newObj)
         screenBuffer[cy * windowWidth + cx] = RGBA(255, 0, 0, 255);
     }
 }
-
+#endif
+          
 // OBJ loading cu suport complet pentru UV-uri (vt) şi, opcional, normale (vn)
 bool mesh::LoadFromObjectFile(const std::string& sFilename)
 {
@@ -1416,12 +1645,12 @@ std::vector<InputEvent> Renderer2D::poolInputEvents()
 
     return events;
 }
+
+#ifdef HAS_CUDA
 // TEXTURĂ: încarcă din disc + upload pe GPU                            
 Texture* Renderer2D::loadTexture(const std::string& path)
 {
     currentTex = new Texture(path);             // ① încarcă în RAM & VRAM
-
-    std::cerr << (useGPU ? "Folosec GPU" : "Folosec CPU") << '\n';;
 
     if (useGPU) {                               // ② trimite către kernel
         uploadTexture(currentTex->device, currentTex->w, currentTex->h);
@@ -1430,14 +1659,17 @@ Texture* Renderer2D::loadTexture(const std::string& path)
         setTexturing(false);
         std::cerr << "[WARN] CPU path încă nu e implementat pentru sampling!\n";
     }
-
+    setTexturing(false);
+    std::cerr<<"[WARN] CPU path inca nu e implementat pentru sampling!\n";
     if (currentMesh)                            // ③ leagă de mesh curent
         currentMesh->texture = currentTex;
 
     return currentTex;                          // ownership rămâne în C++
 }
 
+#endif
 
+#ifdef HAS_CUDA
 void Renderer2D::setTexture(Texture* t)
 {
     currentTex = t;
@@ -1446,6 +1678,7 @@ void Renderer2D::setTexture(Texture* t)
         setTexturing(true);   
 }
 
+#endif
 
 
 static uint32_t sampleCPU(const Texture* tex, float u, float v)
@@ -1461,6 +1694,8 @@ static uint32_t sampleCPU(const Texture* tex, float u, float v)
 
     return tex->pixels[y * tex->w + x];
 }
+  
+#ifdef HAS_CUDA
 void Renderer2D::fillTexturedTri(const triangle& tri, const Texture* tex)
 {
     if (!tex) return;
@@ -1528,3 +1763,4 @@ int ty = int((1.0f - v) * tex->h) & (tex->h - 1);  // idem
         depthBufferCPU[idx]   = z;
     }
 }
+#endif

@@ -55,6 +55,7 @@ class GuiApp(tk.Tk):
             self.stl_path = None  # Clear STL selection when OBJ is selected
             self.lbl_obj.config(text=os.path.basename(path))
             self.lbl_stl.config(text="(niciun fișier .stl ales)")
+
         else:
             self.obj_path = None
             self.lbl_obj.config(text="(niciun fișier .obj ales)")
@@ -74,7 +75,7 @@ class GuiApp(tk.Tk):
             self.stl_path = None
             self.lbl_stl.config(text="(niciun fișier .stl ales)")
         self._update_start_button()
-
+        
     def select_tex(self):
         path = filedialog.askopenfilename(
             title="Alege fișierul PNG/JPG",
@@ -130,7 +131,7 @@ class GuiApp(tk.Tk):
             # Dimensiunea ferestrei SDL (poți ajusta după plac)
             width, height = 1280, 720
             renderer = CustomRenderer("IzerRaster Window", width, height, model_path, self.tex_path, model_type)
-            renderer.setCUDA(False)
+            #renderer.setCUDA(False)
             renderer.Init()
 
             # Load the appropriate model type
@@ -150,7 +151,6 @@ class GuiApp(tk.Tk):
             else:
                 # No texture - use shaded wireframe mode
                 renderer.mode = IzerRaster.RenderMode.SHADED_WIREFRAME
-            
         except Exception as e:
             messagebox.showerror("Eroare la inițializare", str(e))
             self.deiconify()

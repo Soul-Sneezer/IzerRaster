@@ -117,7 +117,6 @@ __global__ static void rasterizeTri(uint32_t* colorBuf, float* depthBuf,
     if (z >= depthBuf[idx]) return;                   // test Z
 
     /* --- culoare ---------------------------------------------------- */
-
     depthBuf[idx] = z;
 
     // glm::vec3 p0 = glm::vec3(x0, y0, z0);

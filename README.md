@@ -131,6 +131,153 @@ Most keyboard and mouse keys are supported and their values are marked with the 
 - KEY_Y
 - KEY_Z
 
+# CUDA Rasterization Implementation
+
+IzerRaster's CUDA implementation provides GPU-accelerated triangle rasterization with depth buffering for high-performance 3D rendering. This documentation covers the GPU-side rendering pipeline that complements the CPU-based 2D drawing functions.
+
+## Architecture Overview
+
+The CUDA rasterizer operates on a **one thread per pixel** architecture, where each CUDA thread is responsible for determining if a pixel lies within a triangle and handling depth testing. This approach maximizes GPU parallelism by utilizing thousands of cores simultaneously.
+
+### Core Components
+
+- **GPU Memory Management**: Dedicated CUDA buffers for color (ARGB32) and depth (float) data
+- **Triangle Rasterization**: Barycentric coordinate-based inside/outside testing
+- **Depth Testing**: Per-pixel hidden surface removal using Z-buffering
+- **Optimized Thread Configuration**: Automatic block size optimization based on GPU capabilities
+
+## CUDA Data Structures
+
+### CudaTri Structure
+```cpp
+struct CudaTri {
+    float x0, y0;     // Screen-space coordinates for vertex 0 (pixels)
+    float x1, y1;     // Screen-space coordinates for vertex 1 (pixels) 
+    float x2, y2;     // Screen-space coordinates for vertex 2 (pixels)
+    float z0, z1, z2; // Depth values for each vertex (post-projection)
+};
+```
+
+This structure represents a triangle ready for GPU rasterization, with all coordinates already transformed from 3D world space to 2D screen space.
+
+## GPU Kernels
+
+### clearBuffers Kernel
+Initializes the framebuffer for each frame by setting every pixel to a default color and maximum depth value.
+
+**Execution Model**: Each thread handles one pixel
+**Purpose**: Prepare clean buffers before triangle rasterization
+**Performance**: Highly parallel, memory-bandwidth limited
+
+### rasterizeTriDepth Kernel
+The core rasterization kernel that determines triangle coverage and performs depth testing.
+
+**Algorithm**:
+1. Calculate barycentric coordinates for the current pixel
+2. Test if pixel lies inside triangle (all barycentric weights ≥ 0)
+3. Interpolate depth value using barycentric coordinates
+4. Perform depth test against existing Z-buffer value
+5. Update color and depth buffers if pixel passes depth test
+
+**Mathematical Foundation**:
+For a triangle with vertices A, B, C and a point P, barycentric coordinates (w0, w1, w2) satisfy:
+- P = w0×A + w1×B + w2×C
+- w0 + w1 + w2 = 1
+- If all weights ≥ 0, point P lies inside the triangle
+
+## API Functions
+
+### initCuda(int width, int height)
+Initializes the CUDA rendering system by allocating GPU memory and configuring optimal thread block dimensions.
+
+**Memory Allocation**:
+- Color buffer: `width × height × sizeof(uint32_t)` bytes
+- Depth buffer: `width × height × sizeof(float)` bytes
+
+**Thread Configuration**:
+- Automatically determines optimal block size based on GPU capabilities
+- Uses square thread blocks (typically 16×16 or 32×32)
+- Calculates grid dimensions to cover entire framebuffer
+
+**Returns**: `true` on success, `false` if GPU memory allocation fails
+
+### renderFrame(const CudaTri* tris, int numTris, uint32_t* hostPix, float* hostDepth)
+Executes the complete GPU rendering pipeline for a frame.
+
+**Rendering Pipeline**:
+1. **Clear Phase**: Reset color buffer to black, depth buffer to maximum distance
+2. **Rasterization Phase**: Process each triangle with depth testing
+3. **Transfer Phase**: Copy results from GPU memory back to CPU
+
+**Performance Characteristics**:
+- Scales linearly with triangle count
+- Each triangle launches a full-screen kernel
+- Memory bandwidth typically becomes the bottleneck for high triangle counts
+
+### cleanupCuda()
+Releases all GPU memory allocations and resets the system to an uninitialized state.
+
+**Resource Management**:
+- Frees color and depth buffers
+- Sets device pointers to nullptr
+- Safe to call multiple times
+
+## Performance Considerations
+
+### Thread Block Optimization
+The system automatically selects thread block dimensions based on:
+- GPU's maximum threads per block capability
+- Square block layout for optimal memory coalescing
+- Power-of-two dimensions for warp efficiency
+
+### Memory Access Patterns
+- **Coalesced Access**: Thread blocks are arranged to ensure adjacent threads access adjacent memory locations
+- **Bank Conflicts**: Avoided through careful thread indexing schemes
+- **Occupancy**: Thread block size chosen to maximize GPU occupancy
+
+### Scalability
+The rasterizer performance scales with:
+- **Resolution**: O(width × height) for buffer operations
+- **Triangle Count**: O(numTriangles) for rasterization
+- **GPU Cores**: Near-linear scaling with available CUDA cores
+
+## Integration with CPU Pipeline
+
+The CUDA rasterizer operates as part of a hybrid CPU/GPU rendering system:
+
+1. **CPU Tasks**:
+   - 3D model loading and transformation
+   - Back-face culling
+   - Triangle sorting for transparency
+   - Wireframe overlay rendering
+
+2. **GPU Tasks**:
+   - Solid triangle fill with depth testing
+   - High-throughput parallel pixel processing
+
+3. **Data Flow**:
+   - CPU prepares triangle data in screen space
+   - GPU rasterizes triangles into framebuffer
+   - CPU reads back results for display and overlay rendering
+
+## Error Handling
+
+The CUDA implementation includes comprehensive error checking:
+- **Allocation Failures**: Detected during initialization
+- **Kernel Launch Errors**: Checked after each kernel call
+- **Memory Transfer Errors**: Validated during host/device copies
+- **Graceful Degradation**: Continues rendering even after non-fatal errors
+
+## Future Extension Points
+
+The current architecture supports future enhancements:
+- **Texture Mapping**: CudaTri structure can be extended with UV coordinates
+- **Per-Vertex Colors**: Additional color attributes for gradient fills
+- **Multi-pass Rendering**: Support for transparency and effects
+- **Compute Shaders**: Integration with custom CUDA kernels for advanced effects
+
+This CUDA implementation provides the high-performance foundation for IzerRaster's 3D rendering capabilities, handling the computationally intensive triangle rasterization while maintaining the flexibility for CPU-based post-processing and overlay effects.
+
 # Trello
 
 We used Trello in order to manage and organise our tasks during the development of the application. This is the [link](https://trello.com/b/ZR0p4Yfg/rasterizer) to our backlog creation.
