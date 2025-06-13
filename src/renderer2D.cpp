@@ -11,7 +11,6 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <cuda_runtime.h>
 #include <cmath>
 #include <cstdlib>      
 // pentru uploadTexture()
@@ -36,12 +35,6 @@ Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t heigh
 
 void Renderer2D::setCUDA(bool enable) {
     noCUDA = enable;
-}
-
-uint64_t Renderer2D::lastTime = 0;
-
-Renderer2D::Renderer2D(const std::string appName, uint16_t width, uint16_t height) : appName(appName), windowWidth(width), windowHeight(height)
-{
 }
 
 void Renderer2D::Init()
@@ -98,7 +91,6 @@ void Renderer2D::Init()
         std::cerr << "Screen texture could not be created! SDL Error: " << SDL_GetError() << std::endl;
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
-        // TTF_Quit();
         SDL_Quit();
 
         return;
@@ -107,8 +99,6 @@ void Renderer2D::Init()
     this->screenBuffer.resize(windowWidth * windowHeight);
     depthBufferCPU.resize(windowWidth * windowHeight, 1e9f); // iniţial infinit
 
-
-    // font = TTF_OpenFont("arial.ttf", 24);
 
     // for triangle projections and geometry
     float fNear = 0.1f;
@@ -123,86 +113,6 @@ void Renderer2D::Init()
     isRunning = true;
 
     this->mode = RenderMode::SHADED_WIREFRAME; // default render mode
-
-    if (useGPU)
-    {
-        if (!initCuda(windowWidth, windowHeight))
-        {
-            std::cerr << "ERROR: CUDA rasterizer initialization failed!" << std::endl;
-            // If GPU init fails, shut down and exit (no CPU fallback implemented here)
-            Quit();
-            return;
-        }
-        // Allocate host buffers for pixel color and depth (to receive CUDA output)
-        cudaPixelBuffer = (uint32_t *)std::malloc(windowWidth * windowHeight * sizeof(uint32_t));
-        cudaDepthBuffer = (float *)std::malloc(windowWidth * windowHeight * sizeof(float));
-
-    }
-
-     perfFreq = SDL_GetPerformanceFrequency();
-    lastPerfCounter = SDL_GetPerformanceCounter();
-}
-
-uint64_t Renderer2D::GetCurrentTime()
-{
-    return SDL_GetTicks();
-}
-
-float Renderer2D::GetDeltaTime()
-{
-    return (GetCurrentTime() - Renderer2D::lastTime) / 1000.0f;
-}
-
-// While Running
-void Renderer2D::Run()
-{
-    Renderer2D::lastTime = GetCurrentTime();
-    while (isRunning)
-    {
-        float deltaTime = GetDeltaTime();
-        Renderer2D::lastTime = GetCurrentTime();
-    
-        // uploadLighting(
-        //          Light{light.position},
-        //          cameraPos,
-        //          Material{mat.diffuseColour, mat.specularColour, mat.shininess}
-        // );        
-    
-        // Render one frame (input handled inside Render/UserUpdate)
-        Render();
-      
-    if (!SDL_SetRenderVSync(renderer, SDL_RENDERER_VSYNC_DISABLED)) {
-    std::cerr << "SDL_SetRenderVSync failed: " << SDL_GetError() << "\n";
-    }
-
-    this->screenTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, windowWidth, windowHeight);
-    if (!screenTexture)
-    {
-        std::cerr << "Screen texture could not be created! SDL Error: " << SDL_GetError() << std::endl;
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-
-        return;
-    }
-
-    this->screenBuffer.resize(windowWidth * windowHeight);
-    depthBufferCPU.resize(windowWidth * windowHeight, 1e9f); // iniţial infinit
-
-
-    // for triangle projections and geometry
-    float fNear = 0.1f;
-    float fFar = 1000.0f;
-    float fFov = 60.0f;
-    float fAspectRatio = (float)windowWidth / (float)windowHeight;
-
-    proj = glm::perspective(glm::radians(fFov), fAspectRatio, fNear, fFar);
-
-    cameraPos = glm::vec4{0};
-
-    isRunning = true;
-
-    this->mode = RenderMode::TEXTURED_WIREFRAME; // default render mode
 
 #ifdef HAS_CUDA
     if (useGPU)
@@ -252,7 +162,7 @@ void Renderer2D::Run()
         // Render one frame (input handled inside Render/UserUpdate)
         Render();
     }
- 
+}
 
 void Renderer2D::Render()
 {
@@ -407,9 +317,6 @@ void Renderer2D::Quit()
         window = nullptr;
     }
 
-    // TTF_CloseFont(font);
-    // TTF_Quit();
-
     SDL_Quit();
 
     isRunning = false;
@@ -538,9 +445,7 @@ mesh Renderer2D::loadStl(const std::string& path) {
 }
 
 // https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
-void Renderer2D::
-  
-  (uint16_t x, uint16_t y, uint16_t radius, RGBA rgba)
+void Renderer2D::drawCircle(uint16_t x, uint16_t y, uint16_t radius, RGBA rgba)
 {
     if (radius < 0)
         return;
@@ -738,139 +643,6 @@ void Renderer2D::fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2
     }
 }
 
-// mesh randering
-void Renderer2D::simpleRender(mesh meshObj)
-{
-    std::vector<triangle> tria;
-
-    triangle triProjected;
-
-    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-    glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, translate));
-
-    glm::mat4 RX, RZ;
-    if (!free_rotate) {
-        RX = glm::rotate(glm::mat4(1.0f), pitch_angle, glm::vec3(1, 0, 0));
-        RZ = glm::rotate(glm::mat4(1.0f), theta,       glm::vec3(0, 0, 1));
-    } else {
-        RX = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(1, 0, 0));
-        RZ = glm::rotate(glm::mat4(1.0f), free_theta,  glm::vec3(0, 0, 1));
-    }
-
-    glm::mat4 model = T * RX * RZ;
-    glm::mat4 mvp = proj * view * model; 
-
-    mesh transformedMesh = applyRenderMatrix(mvp, meshObj);
-
-    // glm::mat4 transl = glm::translate(glm::vec3(0.0f,0.0f,8.0f));
-
-    // mesh newMesh = applyRenderMatrix(transl * rotX * rotZ, meshObj);
-
-    for (auto triTranslated : transformedMesh.tris)
-    {
-
-        // Calculating the normals in order to display the visible triangles
-        glm::vec3 normal, line1, line2;
-        line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
-        line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
-        line1.z = triTranslated.p[1].z - triTranslated.p[0].z;
-
-        line2.x = triTranslated.p[2].x - triTranslated.p[0].x;
-        line2.y = triTranslated.p[2].y - triTranslated.p[0].y;
-        line2.z = triTranslated.p[2].z - triTranslated.p[0].z;
-
-        normal.x = line1.y * line2.z - line1.z * line2.y;
-        normal.y = line1.z * line2.x - line1.x * line2.z;
-        normal.z = line1.x * line2.y - line1.y * line2.x;
-
-        glm::vec3 toCamera = -glm::vec3(triTranslated.p[0]);
-        if (glm::dot(normal, toCamera) < 0.0f) {
-            continue;
-        }
-
-        float l = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-        normal.x /= l;
-        normal.y /= l;
-        normal.z /= l;
-
-        // Display the visible triangles
-        if (normal.x * (triTranslated.p[0].x - cameraPos.x) + normal.y * (triTranslated.p[0].y - cameraPos.y) + normal.z * (triTranslated.p[0].z - cameraPos.z) > 0.0f)
-        {
-
-            for (int i = 0; i < 3; ++i) {
-                triProjected.p[i] = proj * triTranslated.p[i];
-                triProjected.t[i] = triTranslated.t[i];   //  ▲▲▲  păstrează UV-ul
-            }
-
-
-            for (int i = 0; i < 3; i++)
-            {
-                triProjected.p[i].x /= triProjected.p[i].w;
-                triProjected.p[i].y /= triProjected.p[i].w;
-                triProjected.p[i].z /= triProjected.p[i].w;
-                triProjected.p[i].w  = 1.0f;  
-            }
-
-            // Scale
-            triProjected.p[0].x += 1.0f;
-            triProjected.p[0].y += 1.0f;
-            triProjected.p[1].x += 1.0f;
-            triProjected.p[1].y += 1.0f;
-            triProjected.p[2].x += 1.0f;
-            triProjected.p[2].y += 1.0f;
-            triProjected.p[0].x *= 0.5f * (float)windowWidth;
-            triProjected.p[0].y *= 0.5f * (float)windowHeight;
-            triProjected.p[1].x *= 0.5f * (float)windowWidth;
-            triProjected.p[1].y *= 0.5f * (float)windowHeight;
-            triProjected.p[2].x *= 0.5f * (float)windowWidth;
-            triProjected.p[2].y *= 0.5f * (float)windowHeight;
-
-            tria.push_back(triProjected);
-        }
-    }
-
-    // Sorting triagles for correct drawing order
-    sort(tria.begin(), tria.end(), [](triangle &t1, triangle &t2)
-         {
-			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
-			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
-			return z1 > z2; });
-
-    // Drawing
-    for (const auto &triToRaster : tria)
-    {
-        if (this->mode == RenderMode::SHADED || this->mode == RenderMode::SHADED_WIREFRAME)
-            fillTriangle(
-                static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-                static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-                static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                RGBA(200, 200, 200, 255));
-
-        if (this->mode == RenderMode::WIREFRAME || this->mode == RenderMode::SHADED_WIREFRAME)
-            drawTriangle(
-                static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),
-                static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-                static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                RGBA(60, 60, 60, 120));
-   
-        if (mode == RenderMode::TEXTURED || mode == RenderMode::TEXTURED_WIREFRAME)
-            {
-                fillTexturedTri(triToRaster, currentTex ? currentTex : meshObj.texture);
-            }
-         if (mode == RenderMode::SHADED_WIREFRAME || mode == RenderMode::WIREFRAME || mode == RenderMode::TEXTURED_WIREFRAME)
-        {
-            // Draw wireframe
-            drawLine(static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y),  
-                     static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y), RGBA(255, 255, 255, 255));
-            drawLine(static_cast<uint16_t>(triToRaster.p[1].x), static_cast<uint16_t>(triToRaster.p[1].y),
-                     static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y), RGBA(255, 255, 255, 255));
-            drawLine(static_cast<uint16_t>(triToRaster.p[2].x), static_cast<uint16_t>(triToRaster.p[2].y),
-                     static_cast<uint16_t>(triToRaster.p[0].x), static_cast<uint16_t>(triToRaster.p[0].y), RGBA(255, 255, 255, 255));
-        }
-
-   }
-}
-
 void Renderer2D::drawCube()
 {
     meshCube.tris = {
@@ -990,7 +762,7 @@ void Renderer2D::drawObj(mesh obj)
 
 }
 
-// mesh randering
+// mesh rendering
 void Renderer2D::simpleRender(mesh meshObj)
 {
     std::vector<triangle> tria;
@@ -1102,32 +874,6 @@ void Renderer2D::simpleRender(mesh meshObj)
 
    }
 }
-
-void Renderer2D::drawCube()
-{
-    meshCube.tris = {
-        {glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)},
-        {glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
-
-        {glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
-        {glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f)},
-
-        {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)},
-        {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)},
-
-        {glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
-        {glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)},
-
-        {glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
-        {glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)},
-
-        {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)},
-        {glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
-
-    };
-    simpleRender(meshCube);
-}
-
 
 #ifdef HAS_CUDA
 void Renderer2D::gpuRender(const mesh &newObj)
