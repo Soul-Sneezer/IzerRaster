@@ -6,6 +6,9 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_hints.h> 
+#include <SDL3/SDL_keycode.h> 
 #include <SDL3/SDL_events.h> 
 #include <SDL3/SDL_keycode.h> 
 #include <glm/glm.hpp>
@@ -20,7 +23,21 @@
 #include <iostream> 
 #include <optional>
 #include "texture.hpp"
+#include "stl_reader.h"
 
+struct Light 
+{
+   glm::vec3 position;
+   glm::vec3 colour;
+   float intensity;
+};
+
+struct Material 
+{
+   glm::vec3 diffuseColour;
+   glm::vec3 specularColour;
+   float shininess;
+};  
 
 struct RGBA 
 {
@@ -77,6 +94,19 @@ struct Tri {
 class Renderer2D
 {
 private:
+    // Parametrii pentru camera
+    glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    // Parametrii pentru mouse
+    float cameraYaw = -90.0f;
+    float cameraPitch = 0.0f;
+    bool firstMouse = true;
+    int lastMouseX = 0, lastMouseY = 0;
+
+    bool noCUDA;
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* screenTexture = nullptr;
@@ -89,8 +119,6 @@ private:
     mesh obj;
     glm::mat4 rotX, rotZ, transl, proj;
     float theta;
-    glm::vec4 cameraPos;
-
     uint32_t frameCount = 0;            // Frames since last FPS update
     uint32_t fps = 0;                   // Current FPS value
     char fpsString[32] = "FPS: 0";
@@ -158,4 +186,6 @@ public:
     Texture* loadTexture(const std::string& path);
     void     setTexture(Texture* t);
     void fillTexturedTri(const triangle& tri, const Texture* tex);
+    void setCUDA(bool enable);
+    mesh loadStl(const std::string& path);
 };

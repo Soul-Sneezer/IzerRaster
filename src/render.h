@@ -14,6 +14,7 @@
 // Note: This struct can be extended with additional per-vertex attributes (e.g. color, texture UVs) 
 //       for more complex shading or texturing.
 #pragma once
+#include "renderer2D.hpp"
 #include <cstdint>
 
 // ==================  geometrie GPU ==================
@@ -31,8 +32,6 @@ struct CudaTri
     float u2, v2;
 };
 
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,7 +41,7 @@ extern "C" {
 void uploadTexture(const uint32_t* devPixels, int w, int h);
 void setTexturing(bool enable);
 
-
+// void uploadLighting(const Light& light, const glm::vec3& camPos, const Material& material);
 
 
 

@@ -278,7 +278,6 @@ The current architecture supports future enhancements:
 
 This CUDA implementation provides the high-performance foundation for IzerRaster's 3D rendering capabilities, handling the computationally intensive triangle rasterization while maintaining the flexibility for CPU-based post-processing and overlay effects.
 
-
 # Trello
 
 We used Trello in order to manage and organise our tasks during the development of the application. This is the [link](https://trello.com/b/ZR0p4Yfg/rasterizer) to our backlog creation.

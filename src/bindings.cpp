@@ -2,6 +2,8 @@
 #include <pybind11/pybind11.h>  
 #include <pybind11/stl.h> 
 #include "renderer2D.hpp"
+#include <texture.hpp>
+
 
 #ifdef HAS_CUDA
     #include <texture.hpp>
@@ -233,6 +235,7 @@ py::enum_<RenderMode>(m, "RenderMode")
         .def("fillTriangle", &Renderer2D::fillTriangle)
         .def("drawCube", &Renderer2D::drawCube)
         .def("loadObj", &Renderer2D::loadObj, py::arg("filename"))
+        .def("loadStl", &Renderer2D::loadStl, py::arg("filename"))
         .def("drawObj", &Renderer2D::drawObj)
         .def("getCurrentTime", &Renderer2D::GetCurrentTime)
         .def("getDeltaTime", &Renderer2D::GetDeltaTime)
@@ -244,6 +247,7 @@ py::enum_<RenderMode>(m, "RenderMode")
 #ifdef HAS_CUDA
     py::class_<Renderer2D, PyRenderer2D>(m "Renderer2D")
         .def("loadTexture", &Renderer2D::loadTexture,py::return_value_policy::reference)   // NU transferă ownership
+        .def("setCUDA", &Renderer2D::setCUDA)  
         .def("setTexture",  &Renderer2D::setTexture);
 #endif
 }

@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.15)
 option(ENABLE_CUDA "Enable CUDA support" OFF)
 
 # Project Name (should match the output module base name)
+
 if(ENABLE_CUDA)
     project(IzerRaster LANGUAGES CXX CUDA)
 else()
@@ -14,6 +15,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) # Prefer standard C++
+set(CMAKE_CUDA_ARCHITECTURES 86)
 
 # Only set CUDA architecture if CUDA is enabled
 if(ENABLE_CUDA)
@@ -59,6 +61,10 @@ set(COMMON_SOURCES
     src/renderer2D.cpp
     src/bindings.cpp
 )
+# --- stb_image ca INTERFACE ---
+add_library(stb_image INTERFACE)
+target_include_directories(stb_image INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(IzerRaster PRIVATE stb_image)
 
 # Conditionally add CUDA sources
 if(ENABLE_CUDA)
@@ -76,7 +82,6 @@ target_include_directories(stb_image INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(IzerRaster PRIVATE stb_image)
 
 # --- Link Dependencies to the Module ---
-
 # Only set CUDA properties if enabled
 if(ENABLE_CUDA)
     set_target_properties(IzerRaster PROPERTIES

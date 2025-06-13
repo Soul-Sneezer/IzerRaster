@@ -1,9 +1,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "texture.hpp"
+
 #ifdef HAS_CUDA
     #include <cuda_runtime.h>
 #endif
+
 #include <stdexcept>
 #include <cstring> // for std::memcpy
 #include <iostream> // for std::cerr

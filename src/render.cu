@@ -23,6 +23,10 @@ static int       frameHeight = 0;
 static dim3 threadsPerBlock(16, 16);
 static dim3 blocksPerGrid (1 , 1 );
 
+// __device__ Light d_light;
+// __device__ glm::vec3 d_cameraPos;
+// __device__ Material d_material;
+
 /* ====================================================================
    -- Textură globală (read-only)                                      */
 __device__ uint32_t* d_texture = nullptr;   // pixel array RGBA8
@@ -37,6 +41,12 @@ extern "C" void uploadTexture(const uint32_t* devPixels, int w, int h)
     cudaMemcpyToSymbol(d_texH,    &h,         sizeof(int));
 }
 
+// extern "C" void uploadLighting(const Light& light, const glm::vec3& camPos, const Material& material) 
+// {
+//     cudaMemcpyToSymbol(d_light, &light, sizeof(Light));
+//     cudaMemcpyToSymbol(d_cameraPos, &camPos, sizeof(glm::vec3));
+//     cudaMemcpyToSymbol(d_material, &material, sizeof(Material));
+// }
 
 extern "C" void setTexturing(bool enable)
 {
@@ -107,16 +117,54 @@ __global__ static void rasterizeTri(uint32_t* colorBuf, float* depthBuf,
     if (z >= depthBuf[idx]) return;                   // test Z
 
     /* --- culoare ---------------------------------------------------- */
-    uint32_t outColor = flatColor;
-    if (d_useTex && d_texture)
+    depthBuf[idx] = z;
+
+    // glm::vec3 p0 = glm::vec3(x0, y0, z0);
+    // glm::vec3 p1 = glm::vec3(x1, y1, z1);
+    // glm::vec3 p2 = glm::vec3(x2, y2, z2);
+
+    // glm::vec3 fragPos = w0 * p0 + w1 * p1 + w2 * p2;
+
+    // glm::vec3 edge1 = p1 - p0;
+    // glm::vec3 edge2 = p2 - p0;
+
+    // glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+    // glm::vec3 lightDirection = glm::normalize(d_light.position - fragPos);
+    // float diff = fmaxf(glm::dot(normal, lightDirection), 0.0f);
+
+    // glm::vec3 viewDirection = glm::normalize(d_cameraPos - fragPos);
+    // glm::vec3 reflectDirection = glm::reflect(-lightDirection, normal);
+    // float spec = powf(fmaxf(glm::dot(viewDirection, reflectDirection), 0.0f), d_material.shininess);
+
+    // glm::vec3 diffuse = d_material.diffuseColour * diff * d_light.intensity;
+    // glm::vec3 specular = d_material.specularColour * spec * d_light.intensity;
+    // glm::vec3 colour = (diffuse + specular) * d_light.colour;
+
+    // colour += 0.5f * d_material.diffuseColour;
+    // colour = glm::clamp(colour, 0.0f, 1.0f);
+
+    uint32_t texColor = flatColor;
+    if (d_useTex && d_texture) 
     {
         float u = w0 * u0 + w1 * u1 + w2 * u2;
         float v = w0 * v0 + w1 * v1 + w2 * v2;
-        outColor = sampleTexture(u, v);
+        texColor = sampleTexture(u, v);
     }
 
-    colorBuf[idx] = outColor;
-    depthBuf[idx] = z;
+    // float texR = ((texColor >> 16) & 0xFF) / 255.0f;
+    // float texG = ((texColor >> 8) & 0xFF) / 255.0f;
+    // float texB = (texColor & 0xFF) / 255.0f;
+
+    // float outR = texR * colour.x;
+    // float outG = texG * colour.y;
+    // float outB = texB * colour.z;
+
+    // uint32_t outColour = (255 << 24) |
+    //                      (uint8_t(outR * 255.0f) << 16) |
+    //                      (uint8_t(outG * 255.0f) << 8) |
+    //                      (uint8_t(outB * 255.0f));
+    colorBuf[idx] = texColor;
 }
 
 /* ====================================================================
