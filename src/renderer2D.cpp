@@ -6,11 +6,13 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <cuda_runtime.h>
+#ifdef HAS_CUDA
+    #include <cuda_runtime.h>
+    #include "render.h"
+#endif
 #include <cmath>
 #include <cstdlib>
 #include "texture.hpp"
-#include "render.h"        // pentru uploadTexture()
 
 Light light = {
          .position = glm::vec3(0.0f, 10.0f, 10.0f), 
@@ -40,6 +42,7 @@ void Renderer2D::Init()
 {
     SDL_SetAppMetadata(appName.c_str(), "1.0", "renderer");
 
+#ifdef HAS_CUDA
     int deviceCount = 0;
     cudaError_t cudaStatus = cudaGetDeviceCount(&deviceCount);
 
@@ -50,7 +53,7 @@ void Renderer2D::Init()
         std::cout << "No CUDA devices found. Falling back to CPU mode.\n";
         this->useGPU = false;
     }
-
+#endif
 
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
@@ -58,14 +61,6 @@ void Renderer2D::Init()
         return;
     }
 
-    /*
-    if (!TTF_Init())
-    {
-        std::cerr << "SDL_ttf could not initialize!"<< std::endl;
-        SDL_Quit();
-        return;
-    }
-    */
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
     if (!SDL_CreateWindowAndRenderer(appName.c_str(), windowWidth, windowHeight, 0, &window, &renderer))
     {
@@ -126,6 +121,7 @@ void Renderer2D::Init()
 
     this->mode = RenderMode::SHADED_WIREFRAME; // default render mode
 
+#ifdef HAS_CUDA
     if (useGPU)
     {
         if (!initCuda(windowWidth, windowHeight))
@@ -140,6 +136,7 @@ void Renderer2D::Init()
         cudaDepthBuffer = (float *)std::malloc(windowWidth * windowHeight * sizeof(float));
 
     }
+#endif
 
      perfFreq = SDL_GetPerformanceFrequency();
     lastPerfCounter = SDL_GetPerformanceCounter();
@@ -304,6 +301,7 @@ void Renderer2D::Quit()
         return;
     }
 
+#ifdef HAS_CUDA
     if (useGPU)
     {
         if (cudaPixelBuffer)
@@ -318,6 +316,7 @@ void Renderer2D::Quit()
         }
         cleanupCuda();
     }
+#endif 
 
     if (renderer)
     {
@@ -738,15 +737,13 @@ mesh Renderer2D::loadObj(std::string path)
 void Renderer2D::drawObj(mesh obj)
 {
     currentMesh = const_cast<mesh*>(&obj); // set the current mesh to the one being drawn
-    if (useGPU)
-    {
-        gpuRender(obj);
-    }
-    else
-    {
-        simpleRender(obj);
-    }
+#ifdef HAS_CUDA
+    gpuRender(obj);
+#else
+    simpleRender(obj);
+#endif
 }
+
 void Renderer2D::simpleRender(mesh meshObj)
 {
     std::vector<triangle> tria;
@@ -850,7 +847,7 @@ void Renderer2D::simpleRender(mesh meshObj)
         {
             fillTexturedTri(t, currentTex ? currentTex : meshObj.texture);
         }
-
+        
         // wireframe overlay, cu clipping
         if (mode == RenderMode::WIREFRAME
          || mode == RenderMode::SHADED_WIREFRAME
@@ -895,7 +892,7 @@ void Renderer2D::drawCube()
 }
 
 
-
+#ifdef HAS_CUDA
 void Renderer2D::gpuRender(const mesh &newObj)
 {
     if (newObj.tris.empty())
@@ -1087,6 +1084,7 @@ void Renderer2D::gpuRender(const mesh &newObj)
         screenBuffer[cy * windowWidth + cx] = RGBA(255, 0, 0, 255);
     }
 }
+#endif 
 
 // OBJ loading cu suport complet pentru UV-uri (vt) şi, opcional, normale (vn)
 bool mesh::LoadFromObjectFile(const std::string& sFilename)
@@ -1411,13 +1409,13 @@ std::vector<InputEvent> Renderer2D::poolInputEvents()
 
     return events;
 }
+
 // TEXTURĂ: încarcă din disc + upload pe GPU                            
 Texture* Renderer2D::loadTexture(const std::string& path)
 {
     currentTex = new Texture(path);             // ① încarcă în RAM & VRAM
 
-    std::cerr << (useGPU ? "Folosec GPU" : "Folosec CPU") << '\n';;
-
+#ifdef HAS_CUDA
     if (useGPU) {                               // ② trimite către kernel
         uploadTexture(currentTex->device, currentTex->w, currentTex->h);
 
@@ -1425,20 +1423,21 @@ Texture* Renderer2D::loadTexture(const std::string& path)
         
         std::cerr << "[WARN] CPU path încă nu e implementat pentru sampling!\n";
     }        setTexturing(true);
-
+#endif
     if (currentMesh)                            // ③ leagă de mesh curent
         currentMesh->texture = currentTex;
 
     return currentTex;                          // ownership rămâne în C++
 }
 
-
 void Renderer2D::setTexture(Texture* t)
 {
     currentTex = t;
+#ifdef HAS_CUDA
     if (useGPU)
         uploadTexture(t->device, t->w, t->h);
-        setTexturing(true);   
+        setTexturing(true);  
+#endif
 }
 
 
