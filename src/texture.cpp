@@ -20,10 +20,10 @@ Texture::Texture(const std::string& filename)
     std::memcpy(pixels.data(), data, pixels.size() * sizeof(uint32_t));
     stbi_image_free(data);
 
+#ifdef HAS_CUDA
     // ----- alocare pe device + copii-rea ------------
     size_t bytes = pixels.size() * sizeof(uint32_t);
 
-#ifdef HAS_CUDA
     cudaMalloc(&device, bytes);
     cudaMemcpy(device, pixels.data(), bytes, cudaMemcpyHostToDevice);
 #endif

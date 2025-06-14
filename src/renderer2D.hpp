@@ -9,7 +9,6 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_hints.h> 
 #include <SDL3/SDL_keycode.h> 
-#include <SDL3_ttf/SDL_ttf.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtx/transform.hpp>
