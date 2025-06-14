@@ -231,12 +231,12 @@ Standard SDL key names (e.g., `LEFT`, `RIGHT`, `ESCAPE`, `SPACE`, `A`, `B`, ...)
 
 ## User Stories
 
-- User story 1: As a Blender enthusiast, I want to import 3D models in common file formats so I can load and convert my designs without hassle.
+- User story 1: As a Blender enthusiast, I want to import 3D models in common file formats so I can load and visualise my designs without hassle.
 - User story 2: As a designer, I want to set the output resolution myself so I can ensure my images meet quality standards for client work.
-- User story 3: As a lighting artist, I want to tweak lighting settings so my rasterized scenes look dynamic and eye-catching.
-- User story 4: As a 3D animator, I want to switch between rendering modes to experiment with different visual styles for my portfolio.
-- User story 5: As a 3D enthusiast, I want to have simple command for different drawing shapes and have them displayed in a buffer for convenience.
-- User story 6: As a shader developer, I want to apply custom GLSL/HLSL shaders to add unique textures and effects to my models.
+- User story 3: As an artist, I want to have lighting on the models so my rasterized scenes look dynamic and eye-catching.
+- User story 4: As a 3D software developer, I want to switch between CPU and GPU rendering modes to free my GPU VRAM.
+- User story 5: As a 3D enthusiast, I want to have a simple command for different drawing shapes and have them displayed in a buffer for convenience.
+- User story 6: As a shader developer, I want to apply custom textures and effects to my models.
 - User story 7: As a virtual photographer, I want to adjust the camera’s position, angle, and zoom to frame my 3D scenes perfectly for renders.
 - User story 8: As a detail-focused tester, I want anti-aliasing enabled to eliminate jagged edges and ensure my final images look polished.
 - User story 9: As a freelancer with tight deadlines, I want a back face culling option before committing to a full render.
