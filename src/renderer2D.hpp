@@ -9,8 +9,7 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_hints.h> 
 #include <SDL3/SDL_keycode.h> 
-#include <SDL3/SDL_events.h> 
-#include <SDL3/SDL_keycode.h> 
+#include <SDL3_ttf/SDL_ttf.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtx/transform.hpp>
@@ -97,7 +96,6 @@ enum class RenderMode {
     TEXTURED,               // textură (fără sârmă)
     TEXTURED_WIREFRAME      // textură + sârmă
 };
-
 struct Tri {
     glm::vec2 p[3];   // screen-space xy
     float     z[3];   // adâncimi
@@ -133,6 +131,10 @@ private:
     mesh obj;
     glm::mat4 rotX, rotZ, transl, proj;
     float theta;
+
+
+       
+    TTF_Font* font; 
     uint32_t frameCount = 0;            // Frames since last FPS update
     uint32_t fps = 0;                   // Current FPS value
     char fpsString[32] = "FPS: 0";
@@ -140,6 +142,7 @@ private:
     bool isRunning;
     int windowWidth;
     int windowHeight;
+
 
 std::vector<float> depthBufferCPU;   //  ← NOU!
               // deja există
@@ -155,6 +158,7 @@ std::vector<float> depthBufferCPU;   //  ← NOU!
 
 
     static uint64_t lastTime;
+
 
     std::vector<InputEvent> inputEvents;
     std::vector<InputEventListener*> inputListeners;
@@ -214,6 +218,7 @@ public:
     void fillTexturedTri(const triangle& tri, const Texture* tex);
     void setCUDA(bool enable);
     mesh loadStl(const std::string& path);
+
 
     void addInputListener(InputEventListener* listener) {
         inputListeners.push_back(listener);
