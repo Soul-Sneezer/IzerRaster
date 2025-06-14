@@ -231,12 +231,17 @@ Standard SDL key names (e.g., `LEFT`, `RIGHT`, `ESCAPE`, `SPACE`, `A`, `B`, ...)
 
 ## User Stories
 
-- As a user, I can load OBJ and STL models and see them rendered in real time.
-- As a user, I can interact with the scene using mouse and keyboard.
-- As a developer, I can extend the renderer with new shapes and effects.
-- As a user, I can switch between wireframe and shaded modes.
-- As a developer, I can access the rendering pipeline from Python for rapid prototyping.
-- As a user, I get smooth performance on large models thanks to CUDA acceleration.
+- User story 1: As a Blender enthusiast, I want to import 3D models in common file formats so I can load and convert my designs without hassle.
+- User story 2: As a designer, I want to set the output resolution myself so I can ensure my images meet quality standards for client work.
+- User story 3: As a lighting artist, I want to tweak lighting settings so my rasterized scenes look dynamic and eye-catching.
+- User story 4: As a 3D animator, I want to switch between rendering modes to experiment with different visual styles for my portfolio.
+- User story 5: As a 3D enthusiast, I want to have simple command for different drawing shapes and have them displayed in a buffer for convenience.
+- User story 6: As a shader developer, I want to apply custom GLSL/HLSL shaders to add unique textures and effects to my models.
+- User story 7: As a virtual photographer, I want to adjust the camera’s position, angle, and zoom to frame my 3D scenes perfectly for renders.
+- User story 8: As a detail-focused tester, I want anti-aliasing enabled to eliminate jagged edges and ensure my final images look polished.
+- User story 9: As a freelancer with tight deadlines, I want a back face culling option before committing to a full render.
+- User story 10: As a game developer, I want GPU acceleration support to speed up rendering for complex models and large projects.
+- User story 11: As a newbie to 3D software, I want an intuitive interface with helpful tooltips so I can learn the app without getting overwhelmed.
 
 ---
 
