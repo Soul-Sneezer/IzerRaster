@@ -226,7 +226,7 @@ Standard SDL key names (e.g., `LEFT`, `RIGHT`, `ESCAPE`, `SPACE`, `A`, `B`, ...)
 
 - [Trello board](https://trello.com/b/ZR0p4Yfg/rasterizer) for backlog and task tracking.
 - Issues and feature requests: [GitHub Issues](https://github.com/yourusername/IzerRaster/issues)
-
+- usage of AI documentation: https://docs.google.com/document/d/e/2PACX-1vRhBK1_LW3-tBADe12HZKEZG5x0JFaNjvjZkOGKVd7A1cXX4EWRGLnFZpgWzFLwZ0L4GmkP20CCIEm2/pub
 ---
 
 ## User Stories
