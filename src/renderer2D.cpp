@@ -105,8 +105,6 @@ void Renderer2D::Init()
     depthBufferCPU.resize(windowWidth * windowHeight, 1e9f); // iniţial infinit
 
 
-    // font = TTF_OpenFont("arial.ttf", 24);
-
     // for triangle projections and geometry
     float fNear = 0.1f;
     float fFar = 1000.0f;

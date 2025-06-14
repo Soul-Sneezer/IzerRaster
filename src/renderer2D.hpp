@@ -131,9 +131,6 @@ private:
     glm::mat4 rotX, rotZ, transl, proj;
     float theta;
 
-
-       
-    TTF_Font* font; 
     uint32_t frameCount = 0;            // Frames since last FPS update
     uint32_t fps = 0;                   // Current FPS value
     char fpsString[32] = "FPS: 0";
